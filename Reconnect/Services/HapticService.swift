@@ -1,20 +1,21 @@
 import UIKit
 
+@MainActor
 final class HapticService {
     static let shared = HapticService()
 
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
     private let impactHeavy = UIImpactFeedbackGenerator(style: .heavy)
-    private let notification = UINotificationFeedbackGenerator()
-    private let selection = UISelectionFeedbackGenerator()
+    private let notificationGenerator = UINotificationFeedbackGenerator()
+    private let selectionGenerator = UISelectionFeedbackGenerator()
 
     private init() {
         // Pre-warm the generators
         impactLight.prepare()
         impactMedium.prepare()
-        notification.prepare()
-        selection.prepare()
+        notificationGenerator.prepare()
+        selectionGenerator.prepare()
     }
 
     // MARK: - Impact Feedback
@@ -39,21 +40,21 @@ final class HapticService {
     // MARK: - Notification Feedback
 
     func success() {
-        notification.notificationOccurred(.success)
+        notificationGenerator.notificationOccurred(.success)
     }
 
     func warning() {
-        notification.notificationOccurred(.warning)
+        notificationGenerator.notificationOccurred(.warning)
     }
 
     func error() {
-        notification.notificationOccurred(.error)
+        notificationGenerator.notificationOccurred(.error)
     }
 
     // MARK: - Selection Feedback
 
     func selection() {
-        selection.selectionChanged()
+        selectionGenerator.selectionChanged()
     }
 
     // MARK: - Custom Patterns
@@ -68,8 +69,8 @@ final class HapticService {
 
     func celebrate() {
         // A fun pattern for achievements
-        Task {
-            notification.notificationOccurred(.success)
+        Task { @MainActor in
+            notificationGenerator.notificationOccurred(.success)
             try? await Task.sleep(nanoseconds: 100_000_000)
             impactMedium.impactOccurred()
             try? await Task.sleep(nanoseconds: 100_000_000)
