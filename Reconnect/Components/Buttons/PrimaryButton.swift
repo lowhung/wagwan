@@ -1,0 +1,152 @@
+import SwiftUI
+
+struct PrimaryButton: View {
+    let title: String
+    let icon: String?
+    let color: Color
+    var isLoading: Bool = false
+    var action: () -> Void
+
+    @State private var isPressed = false
+
+    init(
+        _ title: String,
+        icon: String? = nil,
+        color: Color = .coral,
+        isLoading: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.icon = icon
+        self.color = color
+        self.isLoading = isLoading
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: {
+            if !isLoading {
+                action()
+            }
+        }) {
+            HStack(spacing: Spacing.xs) {
+                if isLoading {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    if let icon = icon {
+                        Image(systemName: icon)
+                            .font(.headlineSmall)
+                    }
+                    Text(title)
+                        .font(.headlineMedium)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(color)
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .scaleEffect(isPressed ? 0.97 : 1.0)
+            .opacity(isLoading ? 0.8 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            withAnimation(.snappy) {
+                isPressed = pressing
+            }
+        }, perform: {})
+    }
+}
+
+// MARK: - Secondary Button
+
+struct SecondaryButton: View {
+    let title: String
+    let icon: String?
+    let color: Color
+    var action: () -> Void
+
+    @State private var isPressed = false
+
+    init(
+        _ title: String,
+        icon: String? = nil,
+        color: Color = .coral,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.icon = icon
+        self.color = color
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.xs) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.headlineSmall)
+                }
+                Text(title)
+                    .font(.headlineMedium)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(color.opacity(0.15))
+            .foregroundStyle(color)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .scaleEffect(isPressed ? 0.97 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            withAnimation(.snappy) {
+                isPressed = pressing
+            }
+        }, perform: {})
+    }
+}
+
+// MARK: - Icon Button
+
+struct IconButton: View {
+    let icon: String
+    let color: Color
+    var size: CGFloat = 44
+    var action: () -> Void
+
+    @State private var isPressed = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: size * 0.4, weight: .semibold))
+                .frame(width: size, height: size)
+                .background(color.opacity(0.15))
+                .foregroundStyle(color)
+                .clipShape(Circle())
+                .scaleEffect(isPressed ? 0.9 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            withAnimation(.bounce) {
+                isPressed = pressing
+            }
+        }, perform: {})
+    }
+}
+
+#Preview {
+    VStack(spacing: Spacing.md) {
+        PrimaryButton("Add Friend", icon: "plus") {}
+        PrimaryButton("Call Now", icon: "phone.fill", color: .sage) {}
+        SecondaryButton("Skip", icon: "arrow.right") {}
+
+        HStack(spacing: Spacing.md) {
+            IconButton(icon: "phone.fill", color: .sage) {}
+            IconButton(icon: "message.fill", color: .lavender) {}
+            IconButton(icon: "envelope.fill", color: .sunflower) {}
+        }
+    }
+    .padding()
+}
