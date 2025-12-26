@@ -1,5 +1,5 @@
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct FriendListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -56,7 +56,7 @@ struct FriendListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.warmGray.ignoresSafeArea()
+                LinearGradient.warmBackground.ignoresSafeArea()
 
                 if friends.isEmpty {
                     emptyState
