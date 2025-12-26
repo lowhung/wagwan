@@ -1,5 +1,5 @@
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct FriendDetailView: View {
     @Environment(\.modelContext) private var modelContext
@@ -112,7 +112,8 @@ struct FriendDetailView: View {
                     .fill(friend.avatarColor.opacity(0.2))
 
                 if let photoData = friend.photoData,
-                   let uiImage = UIImage(data: photoData) {
+                    let uiImage = UIImage(data: photoData)
+                {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFill()
@@ -244,10 +245,14 @@ struct FriendDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
             } else {
                 VStack(spacing: 0) {
-                    ForEach(friend.contactLogs.sorted { $0.contactedAt > $1.contactedAt }.prefix(5)) { log in
+                    ForEach(friend.contactLogs.sorted { $0.contactedAt > $1.contactedAt }.prefix(5))
+                    { log in
                         HistoryRow(log: log)
 
-                        if log.id != friend.contactLogs.sorted(by: { $0.contactedAt > $1.contactedAt }).prefix(5).last?.id {
+                        if log.id
+                            != friend.contactLogs.sorted(by: { $0.contactedAt > $1.contactedAt })
+                            .prefix(5).last?.id
+                        {
                             Divider()
                                 .padding(.horizontal, Spacing.md)
                         }
@@ -396,6 +401,7 @@ struct LogContactView: View {
     @State private var selectedMethod: ContactMethod = .call
     @State private var notes = ""
     @State private var contactDate = Date()
+    @State private var showConfetti = false
 
     var body: some View {
         NavigationStack {
@@ -409,7 +415,8 @@ struct LogContactView: View {
                             .font(.headlineSmall)
                             .foregroundStyle(Color.warmGrayDark)
 
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: Spacing.xs) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: Spacing.xs)
+                        {
                             ForEach(ContactMethod.allCases) { method in
                                 MethodButton(
                                     method: method,
@@ -474,6 +481,9 @@ struct LogContactView: View {
                     .foregroundStyle(Color.warmGrayDark)
                 }
             }
+            .confettiCelebration(isActive: $showConfetti) {
+                dismiss()
+            }
         }
     }
 
@@ -488,7 +498,7 @@ struct LogContactView: View {
         friend.lastContactedAt = contactDate
 
         HapticService.shared.success()
-        dismiss()
+        showConfetti = true
     }
 }
 
@@ -517,10 +527,15 @@ private struct MethodButton: View {
 }
 
 #Preview {
-    FriendDetailView(friend: {
-        let f = Friend(name: "Sarah Chen", phoneNumber: "555-1234", email: "sarah@example.com", notes: "Met at the coffee shop. Loves hiking and photography.", reminderIntervalDays: 14)
-        f.lastContactedAt = Calendar.current.date(byAdding: .day, value: -10, to: Date())
-        return f
-    }())
+    FriendDetailView(
+        friend: {
+            let f = Friend(
+                name: "Sarah Chen", phoneNumber: "555-1234", email: "sarah@example.com",
+                notes: "Met at the coffee shop. Loves hiking and photography.",
+                reminderIntervalDays: 14)
+            f.lastContactedAt = Calendar.current.date(byAdding: .day, value: -10, to: Date())
+            return f
+        }()
+    )
     .modelContainer(for: [Friend.self, ContactLog.self], inMemory: true)
 }
