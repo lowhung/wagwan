@@ -123,20 +123,38 @@ struct FriendListView: View {
             StatusSummaryCard(
                 count: statusCounts.overdue,
                 label: "Overdue",
-                color: .statusOverdue
-            )
+                color: .statusOverdue,
+                icon: "exclamationmark.triangle.fill",
+                isSelected: selectedFilter == .overdue
+            ) {
+                withAnimation(.snappy) {
+                    selectedFilter = selectedFilter == .overdue ? .all : .overdue
+                }
+            }
 
             StatusSummaryCard(
                 count: statusCounts.dueSoon,
                 label: "Due Soon",
-                color: .statusDueSoon
-            )
+                color: .statusDueSoon,
+                icon: "clock.fill",
+                isSelected: selectedFilter == .dueSoon
+            ) {
+                withAnimation(.snappy) {
+                    selectedFilter = selectedFilter == .dueSoon ? .all : .dueSoon
+                }
+            }
 
             StatusSummaryCard(
                 count: statusCounts.onTrack,
                 label: "On Track",
-                color: .statusOnTrack
-            )
+                color: .statusOnTrack,
+                icon: "checkmark.circle.fill",
+                isSelected: selectedFilter == .onTrack
+            ) {
+                withAnimation(.snappy) {
+                    selectedFilter = selectedFilter == .onTrack ? .all : .onTrack
+                }
+            }
         }
     }
 
@@ -164,22 +182,99 @@ private struct StatusSummaryCard: View {
     let count: Int
     let label: String
     let color: Color
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isPulsing = false
+    @State private var previousCount: Int = 0
+    @State private var isBouncing = false
+
+    private var isOverdue: Bool {
+        label == "Overdue"
+    }
 
     var body: some View {
-        VStack(spacing: Spacing.xxs) {
-            Text("\(count)")
-                .font(.displayMedium)
-                .foregroundStyle(color)
+        Button(action: action) {
+            VStack(spacing: Spacing.xxs) {
+                ZStack {
+                    if isOverdue && count > 0 {
+                        Circle()
+                            .fill(color.opacity(0.2))
+                            .frame(width: 36, height: 36)
+                            .scaleEffect(isPulsing ? 1.3 : 1.0)
+                            .opacity(isPulsing ? 0 : 0.6)
+                    }
 
-            Text(label)
-                .font(.labelSmall)
-                .foregroundStyle(Color.warmGrayDark)
+                    Image(systemName: icon)
+                        .font(.system(size: 20))
+                        .foregroundStyle(color)
+                        .scaleEffect(isBouncing ? 1.2 : 1.0)
+                }
+                .frame(height: 28)
+
+                Text("\(count)")
+                    .font(.displayMedium)
+                    .foregroundStyle(color)
+                    .scaleEffect(isBouncing ? 1.15 : 1.0)
+                    .contentTransition(.numericText())
+
+                Text(label)
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.warmGrayDark)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.sm)
+            .background(isSelected ? color.opacity(0.15) : Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .stroke(isSelected ? color : Color.clear, lineWidth: 2)
+            )
+            .softShadow()
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-        .softShadow()
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(label): \(count) friends. Tap to filter.")
+        .accessibilityHint(
+            isSelected
+                ? "Currently filtered" : "Double tap to show only \(label.lowercased()) friends"
+        )
+        .onAppear {
+            previousCount = count
+            if isOverdue && count > 0 {
+                startPulseAnimation()
+            }
+        }
+        .onChange(of: count) { oldValue, newValue in
+            if oldValue != newValue {
+                triggerBounce()
+            }
+            if isOverdue {
+                if newValue > 0 && oldValue == 0 {
+                    startPulseAnimation()
+                }
+            }
+        }
+    }
+
+    private func startPulseAnimation() {
+        withAnimation(
+            .easeInOut(duration: 1.5)
+                .repeatForever(autoreverses: false)
+        ) {
+            isPulsing = true
+        }
+    }
+
+    private func triggerBounce() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+            isBouncing = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                isBouncing = false
+            }
+        }
     }
 }
 
