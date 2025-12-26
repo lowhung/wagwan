@@ -4,10 +4,14 @@ struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
-        if hasCompletedOnboarding {
-            FriendListView()
-        } else {
-            OnboardingView()
+        ZStack {
+            LinearGradient.warmBackground.ignoresSafeArea()
+
+            if hasCompletedOnboarding {
+                FriendListView()
+            } else {
+                OnboardingView()
+            }
         }
     }
 }
