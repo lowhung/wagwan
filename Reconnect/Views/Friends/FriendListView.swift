@@ -10,6 +10,7 @@ struct FriendListView: View {
     @State private var selectedFriend: Friend?
     @State private var searchText = ""
     @State private var selectedFilter: FilterOption = .all
+    @State private var showingRefreshMessage = false
 
     enum FilterOption: String, CaseIterable {
         case all = "All"
@@ -161,6 +162,9 @@ struct FriendListView: View {
                         .padding(.bottom, Spacing.xxl)
                     }
                     .scrollDismissesKeyboard(.interactively)
+                    .refreshable {
+                        await refreshFriends()
+                    }
                 }
             }
             .navigationTitle("Friends")
@@ -189,6 +193,12 @@ struct FriendListView: View {
             }
             .sheet(item: $selectedFriend) { friend in
                 FriendDetailView(friend: friend)
+            }
+            .overlay(alignment: .top) {
+                if showingRefreshMessage {
+                    RefreshMessageView()
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
         }
     }
@@ -289,6 +299,59 @@ struct FriendListView: View {
         guard let phone = friend.phoneNumber,
               let url = URL(string: "sms:\(phone)") else { return }
         UIApplication.shared.open(url)
+    }
+
+    private func refreshFriends() async {
+        // Add a small delay for the animation to feel natural
+        try? await Task.sleep(nanoseconds: 600_000_000)
+
+        // Trigger haptic feedback
+        await MainActor.run {
+            HapticService.shared.success()
+
+            // Show the refresh message briefly
+            withAnimation(.snappy) {
+                showingRefreshMessage = true
+            }
+        }
+
+        // Hide the message after a moment
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+
+        await MainActor.run {
+            withAnimation(.snappy) {
+                showingRefreshMessage = false
+            }
+        }
+    }
+}
+
+// MARK: - Refresh Message View
+
+private struct RefreshMessageView: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.sage)
+                .scaleEffect(isAnimating ? 1.0 : 0.5)
+
+            Text("All up to date!")
+                .font(.headlineSmall)
+                .foregroundStyle(Color.textPrimary)
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
+        .background(Color.cardBackground)
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .padding(.top, Spacing.xl)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                isAnimating = true
+            }
+        }
     }
 }
 
