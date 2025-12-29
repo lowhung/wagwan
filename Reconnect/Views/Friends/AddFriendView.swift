@@ -5,6 +5,7 @@ import PhotosUI
 struct AddFriendView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var name = ""
     @State private var phoneNumber = ""
@@ -43,7 +44,7 @@ struct AddFriendView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.warmGray.ignoresSafeArea()
+                Color.appBackground.ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: Spacing.lg) {
@@ -140,7 +141,7 @@ struct AddFriendView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
                 }
             }
             .alert("Name Required", isPresented: $showingValidationError) {
@@ -189,23 +190,25 @@ struct AddFriendView: View {
         .onChange(of: selectedPhotoItem) { _, newItem in
             Task {
                 if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                    withAnimation(.bounce) {
+                    withAnimation(reduceMotion ? .none : .bounce) {
                         selectedPhotoData = data
-                        isAvatarBouncing = true
+                        isAvatarBouncing = !reduceMotion
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        withAnimation(.bounce) {
-                            isAvatarBouncing = false
+                    if !reduceMotion {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            withAnimation(.bounce) {
+                                isAvatarBouncing = false
+                            }
                         }
                     }
                 }
             }
         }
-        .animation(.bounce, value: name)
+        .animation(reduceMotion ? .none : .bounce, value: name)
         .contextMenu {
             if selectedPhotoData != nil {
                 Button(role: .destructive) {
-                    withAnimation(.bounce) {
+                    withAnimation(reduceMotion ? .none : .bounce) {
                         selectedPhotoData = nil
                         selectedPhotoItem = nil
                     }
@@ -226,7 +229,7 @@ struct AddFriendView: View {
     }
 
     private var previewColor: Color {
-        guard !name.isEmpty else { return .warmGrayDark }
+        guard !name.isEmpty else { return .textSecondary }
         let colors: [Color] = [.coral, .sage, .lavender, .sunflower]
         let index = abs(name.hashValue) % colors.count
         return colors[index]
@@ -236,7 +239,7 @@ struct AddFriendView: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Label("Reminder Frequency", systemImage: "bell.fill")
                 .font(.labelLarge)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
 
             HStack(spacing: Spacing.xs) {
                 ForEach(ReminderInterval.allCases) { interval in
@@ -244,7 +247,7 @@ struct AddFriendView: View {
                         interval: interval,
                         isSelected: selectedInterval == interval
                     ) {
-                        withAnimation(.bounce) {
+                        withAnimation(reduceMotion ? .none : .bounce) {
                             selectedInterval = interval
                         }
                     }
@@ -252,7 +255,7 @@ struct AddFriendView: View {
             }
         }
         .padding(Spacing.md)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
     }
 
@@ -356,7 +359,7 @@ private struct FormField: View {
             .font(.bodyLarge)
             .lineLimit(3...6)
             .padding(Spacing.sm)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.medium)
@@ -404,7 +407,7 @@ private struct FormField: View {
             }
         }
         .padding(Spacing.sm)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
         .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.medium)
@@ -435,14 +438,14 @@ private struct FormField: View {
         if case .invalid = validationResult {
             return .coral
         }
-        return .warmGrayDark.opacity(0.7)
+        return .textSecondary.opacity(0.7)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Label(title, systemImage: icon)
                 .font(.labelLarge)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
 
             if isMultiline {
                 multilineField
@@ -464,7 +467,7 @@ private struct FormField: View {
                 if showCharacterCount && maxCharacters > 0 {
                     Text("\(text.count)/\(maxCharacters)")
                         .font(.labelSmall)
-                        .foregroundStyle(text.count > maxCharacters ? Color.coral : Color.warmGrayDark.opacity(0.5))
+                        .foregroundStyle(text.count > maxCharacters ? Color.coral : Color.textSecondary.opacity(0.5))
                 }
             }
             .animation(.snappy, value: validationResult)
@@ -491,13 +494,16 @@ private struct IntervalOption: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.selection()
+            action()
+        }) {
             Text(shortLabel)
                 .font(.labelMedium)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.sm)
-                .background(isSelected ? Color.coral : Color.warmGray)
-                .foregroundStyle(isSelected ? .white : Color.warmGrayDark)
+                .background(isSelected ? Color.coral : Color.cardBackground)
+                .foregroundStyle(isSelected ? .white : Color.textSecondary)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
         }
         .buttonStyle(.plain)

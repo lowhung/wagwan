@@ -15,7 +15,7 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            Color.warmGray.ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: Spacing.lg) {
@@ -77,19 +77,20 @@ struct SettingsView: View {
 
                         SettingsRow(
                             icon: "info.circle.fill",
-                            iconColor: .warmGrayDark,
+                            iconColor: .textSecondary,
                             title: "Version",
                             subtitle: ""
                         ) {
                             Text("1.0.0")
                                 .font(.bodyMedium)
-                                .foregroundStyle(Color.warmGrayDark)
+                                .foregroundStyle(Color.textSecondary)
                         }
                     }
 
                     // Danger zone
                     settingsSection("Data") {
                         Button {
+                            HapticService.shared.warning()
                             showingResetConfirmation = true
                         } label: {
                             HStack {
@@ -97,7 +98,7 @@ struct SettingsView: View {
                                     .font(.bodyMedium)
                                 Spacer()
                             }
-                            .foregroundStyle(Color.warmBlack)
+                            .foregroundStyle(Color.textPrimary)
                             .padding(Spacing.md)
                         }
                     }
@@ -137,11 +138,11 @@ struct SettingsView: View {
 
             Text("Reconnect")
                 .font(.displaySmall)
-                .foregroundStyle(Color.warmBlack)
+                .foregroundStyle(Color.textPrimary)
 
             Text("Stay close to who matters")
                 .font(.bodyMedium)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
         }
         .padding(.vertical, Spacing.lg)
     }
@@ -150,13 +151,13 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(title)
                 .font(.headlineSmall)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
                 .padding(.leading, Spacing.xs)
 
             VStack(spacing: 0) {
                 content()
             }
-            .background(Color.white)
+            .background(Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
         }
     }
@@ -178,7 +179,7 @@ struct SettingsView: View {
         } label: {
             Image(systemName: "chevron.right")
                 .font(.labelMedium)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
         }
     }
 
@@ -217,12 +218,12 @@ private struct SettingsRow<Accessory: View>: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.bodyMedium)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
 
                 if !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.labelSmall)
-                        .foregroundStyle(Color.warmGrayDark)
+                        .foregroundStyle(Color.textSecondary)
                 }
             }
 
@@ -241,6 +242,7 @@ private struct SettingsLinkRow: View {
 
     var body: some View {
         Button {
+            HapticService.shared.buttonTap()
             // TODO: Implement navigation
         } label: {
             HStack(spacing: Spacing.sm) {
@@ -251,13 +253,13 @@ private struct SettingsLinkRow: View {
 
                 Text(title)
                     .font(.bodyMedium)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
                     .font(.labelMedium)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
             }
             .padding(Spacing.md)
         }
@@ -272,7 +274,7 @@ private struct StatRow: View {
         HStack {
             Text(label)
                 .font(.bodyMedium)
-                .foregroundStyle(Color.warmBlack)
+                .foregroundStyle(Color.textPrimary)
 
             Spacer()
 

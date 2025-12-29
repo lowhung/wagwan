@@ -3,6 +3,7 @@ import SwiftUI
 
 struct FriendListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: \Friend.name) private var friends: [Friend]
 
     @State private var showingAddFriend = false
@@ -104,7 +105,7 @@ struct FriendListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient.warmBackground.ignoresSafeArea()
+                AdaptiveBackground()
 
                 if friends.isEmpty {
                     EmptyFriendsView {
@@ -137,9 +138,21 @@ struct FriendListView: View {
                             } else {
                                 LazyVStack(spacing: Spacing.sm) {
                                     ForEach(filteredFriends) { friend in
-                                        FriendCard(friend: friend) {
-                                            selectedFriend = friend
-                                        }
+                                        FriendCard(
+                                            friend: friend,
+                                            onTap: {
+                                                selectedFriend = friend
+                                            },
+                                            onLogContact: {
+                                                quickLogContact(for: friend)
+                                            },
+                                            onCall: friend.phoneNumber != nil ? {
+                                                callFriend(friend)
+                                            } : nil,
+                                            onMessage: friend.phoneNumber != nil ? {
+                                                messageFriend(friend)
+                                            } : nil
+                                        )
                                     }
                                 }
                             }
@@ -155,6 +168,7 @@ struct FriendListView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
+                        HapticService.shared.buttonTap()
                         showingAddFriend = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
@@ -190,7 +204,7 @@ struct FriendListView: View {
                 icon: "exclamationmark.triangle.fill",
                 isSelected: selectedFilter == .overdue
             ) {
-                withAnimation(.snappy) {
+                withAnimation(reduceMotion ? .none : .snappy) {
                     selectedFilter = selectedFilter == .overdue ? .all : .overdue
                 }
             }
@@ -202,7 +216,7 @@ struct FriendListView: View {
                 icon: "clock.fill",
                 isSelected: selectedFilter == .dueSoon
             ) {
-                withAnimation(.snappy) {
+                withAnimation(reduceMotion ? .none : .snappy) {
                     selectedFilter = selectedFilter == .dueSoon ? .all : .dueSoon
                 }
             }
@@ -214,7 +228,7 @@ struct FriendListView: View {
                 icon: "checkmark.circle.fill",
                 isSelected: selectedFilter == .onTrack
             ) {
-                withAnimation(.snappy) {
+                withAnimation(reduceMotion ? .none : .snappy) {
                     selectedFilter = selectedFilter == .onTrack ? .all : .onTrack
                 }
             }
@@ -230,9 +244,10 @@ struct FriendListView: View {
                         icon: option.icon,
                         count: countForFilter(option),
                         color: option.color,
-                        isSelected: selectedFilter == option
+                        isSelected: selectedFilter == option,
+                        reduceMotion: reduceMotion
                     ) {
-                        withAnimation(.snappy) {
+                        withAnimation(reduceMotion ? .none : .snappy) {
                             selectedFilter = option
                         }
                     }
@@ -252,6 +267,28 @@ struct FriendListView: View {
         case .onTrack:
             return statusCounts.onTrack
         }
+    }
+
+    // MARK: - Quick Actions
+
+    private func quickLogContact(for friend: Friend) {
+        let log = ContactLog(contactedAt: Date(), method: .other, notes: nil)
+        log.friend = friend
+        friend.contactLogs.append(log)
+        friend.lastContactedAt = Date()
+        HapticService.shared.success()
+    }
+
+    private func callFriend(_ friend: Friend) {
+        guard let phone = friend.phoneNumber,
+              let url = URL(string: "tel:\(phone)") else { return }
+        UIApplication.shared.open(url)
+    }
+
+    private func messageFriend(_ friend: Friend) {
+        guard let phone = friend.phoneNumber,
+              let url = URL(string: "sms:\(phone)") else { return }
+        UIApplication.shared.open(url)
     }
 }
 
@@ -297,14 +334,14 @@ private struct WelcomeHeader: View {
             HStack(spacing: Spacing.xs) {
                 Text(greeting.text)
                     .font(.displaySmall)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
                 Text(greeting.emoji)
                     .font(.system(size: 22))
             }
 
             Text(encouragingMessage)
                 .font(.bodyMedium)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, Spacing.xs)
@@ -319,6 +356,7 @@ private struct StatusSummaryCard: View {
     let isSelected: Bool
     let action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPulsing = false
     @State private var previousCount: Int = 0
     @State private var isBouncing = false
@@ -328,7 +366,10 @@ private struct StatusSummaryCard: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.selection()
+            action()
+        }) {
             VStack(spacing: Spacing.xxs) {
                 ZStack {
                     if isOverdue && count > 0 {
@@ -354,11 +395,11 @@ private struct StatusSummaryCard: View {
 
                 Text(label)
                     .font(.labelSmall)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
-            .background(isSelected ? color.opacity(0.15) : Color.white)
+            .background(isSelected ? color.opacity(0.15) : Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.medium)
@@ -374,15 +415,15 @@ private struct StatusSummaryCard: View {
         )
         .onAppear {
             previousCount = count
-            if isOverdue && count > 0 {
+            if isOverdue && count > 0 && !reduceMotion {
                 startPulseAnimation()
             }
         }
         .onChange(of: count) { oldValue, newValue in
-            if oldValue != newValue {
+            if oldValue != newValue && !reduceMotion {
                 triggerBounce()
             }
-            if isOverdue {
+            if isOverdue && !reduceMotion {
                 if newValue > 0 && oldValue == 0 {
                     startPulseAnimation()
                 }
@@ -391,6 +432,7 @@ private struct StatusSummaryCard: View {
     }
 
     private func startPulseAnimation() {
+        guard !reduceMotion else { return }
         withAnimation(
             .easeInOut(duration: 1.5)
                 .repeatForever(autoreverses: false)
@@ -400,6 +442,7 @@ private struct StatusSummaryCard: View {
     }
 
     private func triggerBounce() {
+        guard !reduceMotion else { return }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
             isBouncing = true
         }
@@ -417,16 +460,17 @@ private struct FilterPill: View {
     let count: Int?
     let color: Color
     let isSelected: Bool
+    var reduceMotion: Bool = false
     var action: () -> Void
 
     @State private var isPressed = false
 
     private var displayColor: Color {
-        isSelected ? color : Color.warmGrayDark
+        isSelected ? color : Color.textSecondary
     }
 
     private var backgroundColor: Color {
-        isSelected ? color.opacity(0.15) : Color.white
+        isSelected ? color.opacity(0.15) : Color.cardBackground
     }
 
     private var borderColor: Color {
@@ -473,8 +517,10 @@ private struct FilterPill: View {
             .scaleEffect(isPressed ? 0.95 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(title)\(count.map { ", \($0) friends" } ?? "")")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+            withAnimation(reduceMotion ? .none : .spring(response: 0.2, dampingFraction: 0.6)) {
                 isPressed = pressing
             }
         }, perform: {})
@@ -488,6 +534,7 @@ private struct EmptyFilterView: View {
     let filterOption: FriendListView.FilterOption
     let onClearFilter: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
 
     private var iconName: String {
@@ -532,7 +579,7 @@ private struct EmptyFilterView: View {
 
             Text(message)
                 .font(.bodyMedium)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
                 .multilineTextAlignment(.center)
 
             Button {
@@ -547,6 +594,7 @@ private struct EmptyFilterView: View {
         .padding(.vertical, Spacing.xl)
         .frame(maxWidth: .infinity)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(
                 .easeInOut(duration: 1.5)
                     .repeatForever(autoreverses: true)
@@ -562,6 +610,7 @@ private struct EmptyFilterView: View {
 private struct EmptyFriendsView: View {
     var onAddFriend: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
     @State private var heartsVisible = false
 
@@ -622,12 +671,12 @@ private struct EmptyFriendsView: View {
             VStack(spacing: Spacing.sm) {
                 Text("Your friend list is waiting to bloom")
                     .font(.displaySmall)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
                     .multilineTextAlignment(.center)
 
                 Text("Add someone special to stay connected with")
                     .font(.bodyMedium)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, Spacing.lg)
@@ -639,14 +688,19 @@ private struct EmptyFriendsView: View {
         }
         .padding(Spacing.xl)
         .onAppear {
-            withAnimation(
-                .easeInOut(duration: 2.0)
-                    .repeatForever(autoreverses: true)
-            ) {
-                isAnimating = true
-            }
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.3)) {
+            if reduceMotion {
+                isAnimating = false
                 heartsVisible = true
+            } else {
+                withAnimation(
+                    .easeInOut(duration: 2.0)
+                        .repeatForever(autoreverses: true)
+                ) {
+                    isAnimating = true
+                }
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.3)) {
+                    heartsVisible = true
+                }
             }
         }
     }
@@ -671,6 +725,7 @@ private struct EmptyFriendsView: View {
 private struct NoSearchResultsView: View {
     let searchText: String
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
 
     var body: some View {
@@ -708,28 +763,29 @@ private struct NoSearchResultsView: View {
             VStack(spacing: Spacing.sm) {
                 Text("No friends found")
                     .font(.displaySmall)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
 
                 if searchText.isEmpty {
                     Text("Try adjusting your filters")
                         .font(.bodyMedium)
-                        .foregroundStyle(Color.warmGrayDark)
+                        .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
                 } else {
                     Text("No one matches \"\(searchText)\"")
                         .font(.bodyMedium)
-                        .foregroundStyle(Color.warmGrayDark)
+                        .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
 
                     Text("Try a different search term")
                         .font(.bodySmall)
-                        .foregroundStyle(Color.warmGrayDark.opacity(0.8))
+                        .foregroundStyle(Color.textSecondary.opacity(0.8))
                 }
             }
             .padding(.horizontal, Spacing.lg)
         }
         .padding(Spacing.xl)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(
                 .easeInOut(duration: 1.5)
                     .repeatForever(autoreverses: true)

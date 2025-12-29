@@ -4,6 +4,7 @@ import SwiftUI
 struct FriendDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @Bindable var friend: Friend
 
@@ -15,7 +16,7 @@ struct FriendDetailView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.warmGray.ignoresSafeArea()
+                Color.appBackground.ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: Spacing.lg) {
@@ -55,7 +56,7 @@ struct FriendDetailView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
                 }
 
                 ToolbarItem(placement: .primaryAction) {
@@ -130,7 +131,7 @@ struct FriendDetailView: View {
             VStack(spacing: Spacing.xs) {
                 Text(friend.name)
                     .font(.displayMedium)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
 
                 StatusBadge(status: friend.status)
             }
@@ -141,7 +142,7 @@ struct FriendDetailView: View {
     private var quickActions: some View {
         HStack(spacing: Spacing.md) {
             if friend.phoneNumber != nil || friend.email != nil {
-                IconButton(icon: "phone.fill", color: .sage, size: 56) {
+                IconButton(icon: "phone.fill", color: .sage, size: 56, accessibilityLabel: "Contact \(friend.name)") {
                     showingCallOptions = true
                 }
             }
@@ -150,7 +151,7 @@ struct FriendDetailView: View {
                 showingLogContact = true
             }
 
-            IconButton(icon: "calendar.badge.plus", color: .lavender, size: 56) {
+            IconButton(icon: "calendar.badge.plus", color: .lavender, size: 56, accessibilityLabel: "Add calendar reminder for \(friend.name)") {
                 createCalendarReminder()
             }
         }
@@ -160,7 +161,7 @@ struct FriendDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text("Contact Info")
                 .font(.headlineSmall)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
 
             VStack(spacing: Spacing.xs) {
                 if let phone = friend.phoneNumber {
@@ -180,7 +181,7 @@ struct FriendDetailView: View {
                 }
             }
             .padding(Spacing.md)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
         }
     }
@@ -189,7 +190,7 @@ struct FriendDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text("Stats")
                 .font(.headlineSmall)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
 
             HStack(spacing: Spacing.sm) {
                 StatCard(
@@ -217,14 +218,14 @@ struct FriendDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text("Notes")
                 .font(.headlineSmall)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
 
             Text(notes)
                 .font(.bodyMedium)
-                .foregroundStyle(Color.warmBlack)
+                .foregroundStyle(Color.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.md)
-                .background(Color.white)
+                .background(Color.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
         }
     }
@@ -233,15 +234,15 @@ struct FriendDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text("Recent Activity")
                 .font(.headlineSmall)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
 
             if friend.contactLogs.isEmpty {
                 Text("No contact history yet")
                     .font(.bodyMedium)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity)
                     .padding(Spacing.lg)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
             } else {
                 VStack(spacing: 0) {
@@ -258,7 +259,7 @@ struct FriendDetailView: View {
                         }
                     }
                 }
-                .background(Color.white)
+                .background(Color.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
             }
         }
@@ -266,6 +267,7 @@ struct FriendDetailView: View {
 
     private var deleteButton: some View {
         Button {
+            HapticService.shared.warning()
             showingDeleteConfirmation = true
         } label: {
             HStack {
@@ -317,7 +319,10 @@ private struct ContactInfoRow: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.buttonTap()
+            action()
+        }) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: icon)
                     .font(.bodyMedium)
@@ -326,13 +331,13 @@ private struct ContactInfoRow: View {
 
                 Text(value)
                     .font(.bodyMedium)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
                     .font(.labelSmall)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
             }
         }
         .buttonStyle(.plain)
@@ -352,12 +357,12 @@ private struct StatCard: View {
 
             Text(label)
                 .font(.labelSmall)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(Spacing.sm)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
     }
 }
@@ -377,11 +382,11 @@ private struct HistoryRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(log.method.label)
                     .font(.bodyMedium)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
 
                 Text(log.contactedAt.formatted(date: .abbreviated, time: .omitted))
                     .font(.labelSmall)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
             }
 
             Spacer()
@@ -395,6 +400,7 @@ private struct HistoryRow: View {
 struct LogContactView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let friend: Friend
 
@@ -407,14 +413,14 @@ struct LogContactView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.warmGray.ignoresSafeArea()
+                Color.appBackground.ignoresSafeArea()
 
                 VStack(spacing: Spacing.lg) {
                     // Method picker
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("How did you connect?")
                             .font(.headlineSmall)
-                            .foregroundStyle(Color.warmGrayDark)
+                            .foregroundStyle(Color.textSecondary)
 
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: Spacing.xs)
                         {
@@ -423,7 +429,7 @@ struct LogContactView: View {
                                     method: method,
                                     isSelected: selectedMethod == method
                                 ) {
-                                    withAnimation(.bounce) {
+                                    withAnimation(reduceMotion ? .none : .bounce) {
                                         selectedMethod = method
                                     }
                                 }
@@ -435,7 +441,7 @@ struct LogContactView: View {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("When?")
                             .font(.headlineSmall)
-                            .foregroundStyle(Color.warmGrayDark)
+                            .foregroundStyle(Color.textSecondary)
 
                         DatePicker(
                             "",
@@ -446,7 +452,7 @@ struct LogContactView: View {
                         .datePickerStyle(.graphical)
                         .tint(.coral)
                         .padding(Spacing.sm)
-                        .background(Color.white)
+                        .background(Color.cardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
                     }
 
@@ -454,13 +460,13 @@ struct LogContactView: View {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("Notes (optional)")
                             .font(.headlineSmall)
-                            .foregroundStyle(Color.warmGrayDark)
+                            .foregroundStyle(Color.textSecondary)
 
                         TextField("What did you talk about?", text: $notes, axis: .vertical)
                             .font(.bodyMedium)
                             .lineLimit(2...4)
                             .padding(Spacing.sm)
-                            .background(Color.white)
+                            .background(Color.cardBackground)
                             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
                             .overlay(
                                 RoundedRectangle(cornerRadius: CornerRadius.medium)
@@ -490,7 +496,7 @@ struct LogContactView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
                 }
             }
             .confettiCelebration(isActive: $showConfetti) {
@@ -520,7 +526,10 @@ private struct MethodButton: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.selection()
+            action()
+        }) {
             VStack(spacing: Spacing.xxs) {
                 Image(systemName: method.icon)
                     .font(.title3)
@@ -530,8 +539,8 @@ private struct MethodButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
-            .background(isSelected ? Color.coral : Color.white)
-            .foregroundStyle(isSelected ? .white : Color.warmGrayDark)
+            .background(isSelected ? Color.coral : Color.cardBackground)
+            .foregroundStyle(isSelected ? .white : Color.textSecondary)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
         }
         .buttonStyle(.plain)

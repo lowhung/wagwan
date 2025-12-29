@@ -1,14 +1,17 @@
 import SwiftUI
+import UIKit
 
-// MARK: - Color Palette
+// MARK: - Adaptive Color Palette
 
 extension Color {
-    // Primary warm colors - softCoral #F4A6A0 (warmer, less saturated pink-coral)
+    // MARK: - Primary Warm Colors
+
+    // softCoral #F4A6A0 (warmer, less saturated pink-coral)
     static let coral = Color(red: 0.957, green: 0.651, blue: 0.627)
     static let coralLight = Color(red: 0.973, green: 0.776, blue: 0.757)
     static let coralDark = Color(red: 0.839, green: 0.533, blue: 0.514)
 
-    // Secondary colors - dustySage #A8C5B5 (more muted, sophisticated)
+    // dustySage #A8C5B5 (more muted, sophisticated)
     static let sage = Color(red: 0.659, green: 0.773, blue: 0.710)
     static let sageLight = Color(red: 0.784, green: 0.863, blue: 0.816)
     static let sageDark = Color(red: 0.533, green: 0.659, blue: 0.600)
@@ -23,15 +26,68 @@ extension Color {
     static let sunflowerLight = Color(red: 0.976, green: 0.902, blue: 0.706)
     static let sunflowerDark = Color(red: 0.863, green: 0.733, blue: 0.420)
 
-    // Neutral colors
+    // MARK: - Adaptive Semantic Colors
+
+    /// Primary background - warm cream in light, warm dark in dark mode
+    static let appBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.11, green: 0.10, blue: 0.09, alpha: 1.0)  // warm black #1C1A17
+            : UIColor(red: 0.933, green: 0.918, blue: 0.902, alpha: 1.0)  // warmGray
+    })
+
+    /// Card/surface background - white in light, warm dark gray in dark mode
+    static let cardBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.16, green: 0.14, blue: 0.13, alpha: 1.0)  // warm gray dark #282421
+            : UIColor.white
+    })
+
+    /// Elevated surface - for sheets and modals
+    static let elevatedBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.20, green: 0.18, blue: 0.16, alpha: 1.0)  // slightly lighter #332E29
+            : UIColor(red: 0.933, green: 0.918, blue: 0.902, alpha: 1.0)  // warmGray
+    })
+
+    /// Primary text color - adapts for readability
+    static let textPrimary = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.933, green: 0.918, blue: 0.902, alpha: 1.0)  // warmGray (light text)
+            : UIColor(red: 0.2, green: 0.18, blue: 0.16, alpha: 1.0)  // warmBlack
+    })
+
+    /// Secondary text color - muted
+    static let textSecondary = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.6, green: 0.57, blue: 0.54, alpha: 1.0)  // lighter warm gray
+            : UIColor(red: 0.467, green: 0.439, blue: 0.412, alpha: 1.0)  // warmGrayDark
+    })
+
+    // MARK: - Legacy Neutral Colors (for backwards compatibility)
+
     static let warmGray = Color(red: 0.933, green: 0.918, blue: 0.902)
     static let warmGrayDark = Color(red: 0.467, green: 0.439, blue: 0.412)
     static let warmBlack = Color(red: 0.2, green: 0.18, blue: 0.16)
 
-    // Status colors
-    static let statusOverdue = coral
-    static let statusDueSoon = sunflower
-    static let statusOnTrack = sage
+    // MARK: - Status Colors (slightly brighter in dark mode for visibility)
+
+    static let statusOverdue = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.98, green: 0.70, blue: 0.67, alpha: 1.0)  // brighter coral
+            : UIColor(red: 0.957, green: 0.651, blue: 0.627, alpha: 1.0)  // coral
+    })
+
+    static let statusDueSoon = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.98, green: 0.88, blue: 0.60, alpha: 1.0)  // brighter sunflower
+            : UIColor(red: 0.961, green: 0.843, blue: 0.557, alpha: 1.0)  // sunflower
+    })
+
+    static let statusOnTrack = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.70, green: 0.82, blue: 0.76, alpha: 1.0)  // brighter sage
+            : UIColor(red: 0.659, green: 0.773, blue: 0.710, alpha: 1.0)  // sage
+    })
 }
 
 // MARK: - Typography
@@ -86,6 +142,24 @@ extension View {
     func softShadow() -> some View {
         self.shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
+
+    /// Adaptive shadow that's more subtle in dark mode
+    func adaptiveShadow() -> some View {
+        self.modifier(AdaptiveShadowModifier())
+    }
+}
+
+private struct AdaptiveShadowModifier: ViewModifier {
+    @Environment(\.colorScheme) var colorScheme
+
+    func body(content: Content) -> some View {
+        content.shadow(
+            color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08),
+            radius: colorScheme == .dark ? 4 : 8,
+            x: 0,
+            y: colorScheme == .dark ? 2 : 4
+        )
+    }
 }
 
 // MARK: - Animation Presets
@@ -99,11 +173,18 @@ extension Animation {
 // MARK: - View Modifiers
 
 struct CardStyle: ViewModifier {
+    @Environment(\.colorScheme) var colorScheme
+
     func body(content: Content) -> some View {
         content
-            .background(Color.white)
+            .background(Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
-            .cardShadow()
+            .shadow(
+                color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08),
+                radius: colorScheme == .dark ? 4 : 8,
+                x: 0,
+                y: colorScheme == .dark ? 2 : 4
+            )
     }
 }
 
@@ -131,10 +212,33 @@ extension View {
     }
 }
 
-// MARK: - Gradients
+// MARK: - Adaptive Gradients
 
 extension LinearGradient {
-    /// Subtle warm background gradient from cream to white
+    /// Subtle warm background gradient - adapts to color scheme
+    static func warmBackground(for colorScheme: ColorScheme) -> LinearGradient {
+        if colorScheme == .dark {
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.13, green: 0.12, blue: 0.11),  // warm dark
+                    Color(red: 0.11, green: 0.10, blue: 0.09),  // slightly darker
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        } else {
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.996, green: 0.976, blue: 0.949),  // cream
+                    Color.white,
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
+
+    /// Legacy light mode gradient (for compatibility)
     static var warmBackground: LinearGradient {
         LinearGradient(
             colors: [
@@ -187,6 +291,17 @@ extension RadialGradient {
             startRadius: 0,
             endRadius: 100
         )
+    }
+}
+
+// MARK: - Adaptive Background View
+
+struct AdaptiveBackground: View {
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        LinearGradient.warmBackground(for: colorScheme)
+            .ignoresSafeArea()
     }
 }
 
