@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct AddFriendView: View {
     @Environment(\.modelContext) private var modelContext
@@ -11,6 +12,11 @@ struct AddFriendView: View {
     @State private var notes = ""
     @State private var selectedInterval: ReminderInterval = .biweekly
     @State private var showingValidationError = false
+
+    // Photo picker state
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedPhotoData: Data?
+    @State private var isAvatarBouncing = false
 
     var existingFriend: Friend?
 
@@ -24,6 +30,7 @@ struct AddFriendView: View {
             _email = State(initialValue: friend.email ?? "")
             _notes = State(initialValue: friend.notes ?? "")
             _selectedInterval = State(initialValue: ReminderInterval(rawValue: friend.reminderIntervalDays) ?? .biweekly)
+            _selectedPhotoData = State(initialValue: friend.photoData)
         }
     }
 
@@ -109,16 +116,66 @@ struct AddFriendView: View {
     // MARK: - Subviews
 
     private var avatarPreview: some View {
-        ZStack {
-            Circle()
-                .fill(previewColor.opacity(0.2))
+        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+            ZStack {
+                // Avatar circle with photo or initials
+                if let photoData = selectedPhotoData,
+                   let uiImage = UIImage(data: photoData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                } else {
+                    Circle()
+                        .fill(previewColor.opacity(0.2))
 
-            Text(previewInitials)
-                .font(.displayLarge)
-                .foregroundStyle(previewColor)
+                    Text(previewInitials)
+                        .font(.displayLarge)
+                        .foregroundStyle(previewColor)
+                }
+
+                // Camera badge overlay
+                Image(systemName: selectedPhotoData == nil ? "camera.fill" : "pencil")
+                    .font(.caption)
+                    .foregroundStyle(.white)
+                    .padding(6)
+                    .background(Color.coral)
+                    .clipShape(Circle())
+                    .offset(x: 35, y: 35)
+            }
+            .frame(width: 100, height: 100)
+            .scaleEffect(isAvatarBouncing ? 1.1 : 1.0)
         }
-        .frame(width: 100, height: 100)
+        .buttonStyle(.plain)
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            Task {
+                if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                    withAnimation(.bounce) {
+                        selectedPhotoData = data
+                        isAvatarBouncing = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        withAnimation(.bounce) {
+                            isAvatarBouncing = false
+                        }
+                    }
+                }
+            }
+        }
         .animation(.bounce, value: name)
+        .contextMenu {
+            if selectedPhotoData != nil {
+                Button(role: .destructive) {
+                    withAnimation(.bounce) {
+                        selectedPhotoData = nil
+                        selectedPhotoItem = nil
+                    }
+                } label: {
+                    Label("Remove Photo", systemImage: "trash")
+                }
+            }
+        }
     }
 
     private var previewInitials: String {
@@ -178,6 +235,7 @@ struct AddFriendView: View {
             friend.email = email.isEmpty ? nil : email
             friend.notes = notes.isEmpty ? nil : notes
             friend.reminderIntervalDays = selectedInterval.rawValue
+            friend.photoData = selectedPhotoData
         } else {
             // Create new
             let friend = Friend(
@@ -187,6 +245,7 @@ struct AddFriendView: View {
                 notes: notes.isEmpty ? nil : notes,
                 reminderIntervalDays: selectedInterval.rawValue
             )
+            friend.photoData = selectedPhotoData
             modelContext.insert(friend)
         }
 
