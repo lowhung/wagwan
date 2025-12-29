@@ -4,32 +4,37 @@ struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var currentPage = 0
+    @State private var showCelebration = false
+    @State private var isTransitioning = false
 
     private let pages: [OnboardingPage] = [
         OnboardingPage(
             icon: "heart.fill",
             iconColor: .coral,
             title: "Stay Connected",
-            subtitle: "Life gets busy. Reconnect helps you remember to reach out to the friends who matter most."
+            subtitle:
+                "Life gets busy. Reconnect helps you remember to reach out to the friends who matter most."
         ),
         OnboardingPage(
             icon: "bell.fill",
             iconColor: .sunflower,
             title: "Gentle Reminders",
-            subtitle: "Set personalized schedules for each friend. Get nudged when it's time to say hello."
+            subtitle:
+                "Set personalized schedules for each friend. Get nudged when it's time to say hello."
         ),
         OnboardingPage(
             icon: "chart.line.uptrend.xyaxis",
             iconColor: .sage,
             title: "Track Your Progress",
-            subtitle: "See at a glance who's overdue, who's due soon, and celebrate your connections."
+            subtitle:
+                "See at a glance who's overdue, who's due soon, and celebrate your connections."
         ),
         OnboardingPage(
             icon: "calendar.badge.plus",
             iconColor: .lavender,
             title: "Calendar Integration",
             subtitle: "Create calendar events that link back to Reconnect for seamless scheduling."
-        )
+        ),
     ]
 
     var body: some View {
@@ -54,7 +59,10 @@ struct OnboardingView: View {
                         ForEach(0..<pages.count, id: \.self) { index in
                             Circle()
                                 .fill(index == currentPage ? Color.coral : Color.coral.opacity(0.3))
-                                .frame(width: index == currentPage ? 10 : 8, height: index == currentPage ? 10 : 8)
+                                .frame(
+                                    width: index == currentPage ? 10 : 8,
+                                    height: index == currentPage ? 10 : 8
+                                )
                                 .animation(reduceMotion ? .none : .bounce, value: currentPage)
                         }
                     }
@@ -85,7 +93,19 @@ struct OnboardingView: View {
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, Spacing.xl)
             }
+
+            // Transition overlay
+            if isTransitioning {
+                Color.white
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+            }
         }
+        .confettiCelebration(
+            isActive: $showCelebration,
+            message: "You're all set!",
+            duration: 1.5
+        )
     }
 
     private func pageView(_ page: OnboardingPage) -> some View {
@@ -124,9 +144,18 @@ struct OnboardingView: View {
     }
 
     private func completeOnboarding() {
-        HapticService.shared.success()
-        withAnimation(reduceMotion ? .none : .gentleBounce) {
-            hasCompletedOnboarding = true
+        HapticService.shared.celebrate()
+        showCelebration = true
+
+        // Delay the transition to let the celebration play
+        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0.3 : 1.2)) {
+            withAnimation(reduceMotion ? .none : .easeInOut(duration: 0.5)) {
+                isTransitioning = true
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                hasCompletedOnboarding = true
+            }
         }
     }
 }
