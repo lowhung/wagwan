@@ -12,11 +12,24 @@ struct FriendCard: View {
     @State private var offset: CGFloat = 0
     @State private var isShowingLeadingActions = false
     @State private var isShowingTrailingActions = false
+    @State private var avatarPulse = false
 
     private let actionThreshold: CGFloat = 60
     private let fullSwipeThreshold: CGFloat = 120
     private let leadingActionWidth: CGFloat = 80
     private let trailingActionWidth: CGFloat = 160
+
+    // Status accent color for left border
+    private var statusAccentColor: Color {
+        switch friend.status {
+        case .onTrack:
+            return Color.sage
+        case .dueSoon:
+            return Color.sunflower
+        case .overdue:
+            return Color.coral.opacity(0.7)
+        }
+    }
 
     // MARK: - Accessibility
 
@@ -102,34 +115,58 @@ struct FriendCard: View {
                 onTap()
             }
         }) {
-            HStack(spacing: Spacing.md) {
-                // Avatar
-                avatarView
+            HStack(spacing: 0) {
+                // Status accent border
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(statusAccentColor)
+                    .frame(width: 4)
+                    .padding(.vertical, Spacing.sm)
 
-                // Info
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text(friend.name)
-                        .font(.headlineMedium)
-                        .foregroundStyle(Color.textPrimary)
+                HStack(spacing: Spacing.md) {
+                    // Avatar
+                    avatarView
 
-                    lastContactText
-                }
+                    // Info
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text(friend.name)
+                            .font(.headlineMedium)
+                            .foregroundStyle(Color.textPrimary)
 
-                Spacer()
+                        lastContactText
+                    }
 
-                // Status
-                VStack(alignment: .trailing, spacing: Spacing.xs) {
-                    StatusBadge(status: friend.status)
+                    Spacer()
 
-                    if friend.status != .onTrack {
-                        dueText
+                    // Status
+                    VStack(alignment: .trailing, spacing: Spacing.xs) {
+                        StatusBadge(status: friend.status)
+
+                        friendlyDueText
                     }
                 }
+                .padding(Spacing.md)
             }
-            .padding(Spacing.md)
-            .background(Color.cardBackground)
+            .background(
+                ZStack {
+                    Color.cardBackground
+                    // Subtle warm gradient overlay
+                    LinearGradient(
+                        colors: [
+                            statusAccentColor.opacity(0.03),
+                            Color.clear
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                }
+            )
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
-            .adaptiveShadow()
+            .shadow(
+                color: statusAccentColor.opacity(0.15),
+                radius: 8,
+                x: 0,
+                y: 4
+            )
             .scaleEffect(isPressed ? 0.98 : 1.0)
         }
         .buttonStyle(.plain)
@@ -267,6 +304,23 @@ struct FriendCard: View {
 
     private var avatarView: some View {
         ZStack {
+            // Gentle pulse for overdue friends
+            if friend.status == .overdue && !reduceMotion {
+                Circle()
+                    .fill(Color.coral.opacity(0.2))
+                    .frame(width: 60, height: 60)
+                    .scaleEffect(avatarPulse ? 1.2 : 1.0)
+                    .opacity(avatarPulse ? 0 : 0.6)
+                    .onAppear {
+                        withAnimation(
+                            .easeInOut(duration: 2.0)
+                            .repeatForever(autoreverses: false)
+                        ) {
+                            avatarPulse = true
+                        }
+                    }
+            }
+
             // Soft glow effect behind avatar
             Circle()
                 .fill(RadialGradient.avatarGlow(color: friend.avatarColor))
@@ -307,19 +361,38 @@ struct FriendCard: View {
         }
     }
 
-    private var dueText: some View {
+    private var friendlyDueText: some View {
         Group {
             let days = friend.daysUntilDue
             if days < 0 {
-                Text("\(abs(days))d overdue")
+                Text("Miss them? Say hi!")
                     .font(.labelSmall)
                     .foregroundStyle(Color.coral)
-            } else {
-                Text("Due in \(days)d")
+            } else if days == 0 {
+                Text("Say hi today!")
                     .font(.labelSmall)
                     .foregroundStyle(Color.sunflowerDark)
+            } else if days == 1 {
+                Text("Say hi tomorrow")
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textSecondary)
+            } else if days <= 7 {
+                Text("Say hi by \(dueDayName)")
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textSecondary)
+            } else {
+                Text("Next: \(days) days")
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textSecondary)
             }
         }
+    }
+
+    private var dueDayName: String {
+        let dueDate = Calendar.current.date(byAdding: .day, value: friend.daysUntilDue, to: Date()) ?? Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: dueDate)
     }
 
     private func daysAgoText(_ days: Int) -> String {
