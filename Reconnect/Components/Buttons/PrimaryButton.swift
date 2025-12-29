@@ -49,14 +49,18 @@ struct PrimaryButton: View {
             .background(color)
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .scaleEffect(isPressed ? 0.97 : 1.0)
+            .scaleEffect(
+                x: isPressed ? 0.96 : 1.0,
+                y: isPressed ? 0.98 : 1.0
+            )
+            .brightness(isPressed ? 0.05 : 0)
             .opacity(isLoading ? 0.8 : 1.0)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(reduceMotion ? .none : .snappy) {
+            withAnimation(reduceMotion ? .none : .spring(response: 0.25, dampingFraction: 0.6)) {
                 isPressed = pressing
             }
         }, perform: {})
@@ -101,16 +105,19 @@ struct SecondaryButton: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 54)
-            .background(color.opacity(0.15))
+            .background(color.opacity(isPressed ? 0.25 : 0.15))
             .foregroundStyle(color)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .scaleEffect(isPressed ? 0.97 : 1.0)
+            .scaleEffect(
+                x: isPressed ? 0.96 : 1.0,
+                y: isPressed ? 0.98 : 1.0
+            )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(reduceMotion ? .none : .snappy) {
+            withAnimation(reduceMotion ? .none : .spring(response: 0.25, dampingFraction: 0.6)) {
                 isPressed = pressing
             }
         }, perform: {})
@@ -137,16 +144,16 @@ struct IconButton: View {
             Image(systemName: icon)
                 .font(.system(size: size * 0.4, weight: .semibold))
                 .frame(width: size, height: size)
-                .background(color.opacity(0.15))
+                .background(color.opacity(isPressed ? 0.25 : 0.15))
                 .foregroundStyle(color)
                 .clipShape(Circle())
-                .scaleEffect(isPressed ? 0.9 : 1.0)
+                .scaleEffect(isPressed ? 0.85 : 1.0)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel ?? icon)
         .accessibilityAddTraits(.isButton)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(reduceMotion ? .none : .bounce) {
+            withAnimation(reduceMotion ? .none : .spring(response: 0.25, dampingFraction: 0.5)) {
                 isPressed = pressing
             }
         }, perform: {})
