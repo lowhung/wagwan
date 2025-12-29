@@ -7,6 +7,7 @@ struct PrimaryButton: View {
     var isLoading: Bool = false
     var action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPressed = false
 
     init(
@@ -51,8 +52,10 @@ struct PrimaryButton: View {
             .opacity(isLoading ? 0.8 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isButton)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.snappy) {
+            withAnimation(reduceMotion ? .none : .snappy) {
                 isPressed = pressing
             }
         }, perform: {})
@@ -67,6 +70,7 @@ struct SecondaryButton: View {
     let color: Color
     var action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPressed = false
 
     init(
@@ -99,8 +103,10 @@ struct SecondaryButton: View {
             .scaleEffect(isPressed ? 0.97 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isButton)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.snappy) {
+            withAnimation(reduceMotion ? .none : .snappy) {
                 isPressed = pressing
             }
         }, perform: {})
@@ -113,8 +119,10 @@ struct IconButton: View {
     let icon: String
     let color: Color
     var size: CGFloat = 44
+    var accessibilityLabel: String?
     var action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPressed = false
 
     var body: some View {
@@ -128,8 +136,10 @@ struct IconButton: View {
                 .scaleEffect(isPressed ? 0.9 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel ?? icon)
+        .accessibilityAddTraits(.isButton)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.bounce) {
+            withAnimation(reduceMotion ? .none : .bounce) {
                 isPressed = pressing
             }
         }, perform: {})

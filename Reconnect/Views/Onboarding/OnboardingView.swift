@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var currentPage = 0
 
     private let pages: [OnboardingPage] = [
@@ -44,7 +45,7 @@ struct OnboardingView: View {
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.gentleBounce, value: currentPage)
+                .animation(reduceMotion ? .none : .gentleBounce, value: currentPage)
 
                 // Bottom section
                 VStack(spacing: Spacing.lg) {
@@ -54,7 +55,7 @@ struct OnboardingView: View {
                             Circle()
                                 .fill(index == currentPage ? Color.coral : Color.coral.opacity(0.3))
                                 .frame(width: index == currentPage ? 10 : 8, height: index == currentPage ? 10 : 8)
-                                .animation(.bounce, value: currentPage)
+                                .animation(reduceMotion ? .none : .bounce, value: currentPage)
                         }
                     }
 
@@ -73,7 +74,7 @@ struct OnboardingView: View {
                             .frame(maxWidth: .infinity)
 
                             PrimaryButton("Next", icon: "arrow.right") {
-                                withAnimation(.gentleBounce) {
+                                withAnimation(reduceMotion ? .none : .gentleBounce) {
                                     currentPage += 1
                                 }
                             }
@@ -124,7 +125,7 @@ struct OnboardingView: View {
 
     private func completeOnboarding() {
         HapticService.shared.success()
-        withAnimation(.gentleBounce) {
+        withAnimation(reduceMotion ? .none : .gentleBounce) {
             hasCompletedOnboarding = true
         }
     }

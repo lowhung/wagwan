@@ -5,6 +5,7 @@ import PhotosUI
 struct AddFriendView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var name = ""
     @State private var phoneNumber = ""
@@ -189,23 +190,25 @@ struct AddFriendView: View {
         .onChange(of: selectedPhotoItem) { _, newItem in
             Task {
                 if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                    withAnimation(.bounce) {
+                    withAnimation(reduceMotion ? .none : .bounce) {
                         selectedPhotoData = data
-                        isAvatarBouncing = true
+                        isAvatarBouncing = !reduceMotion
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        withAnimation(.bounce) {
-                            isAvatarBouncing = false
+                    if !reduceMotion {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            withAnimation(.bounce) {
+                                isAvatarBouncing = false
+                            }
                         }
                     }
                 }
             }
         }
-        .animation(.bounce, value: name)
+        .animation(reduceMotion ? .none : .bounce, value: name)
         .contextMenu {
             if selectedPhotoData != nil {
                 Button(role: .destructive) {
-                    withAnimation(.bounce) {
+                    withAnimation(reduceMotion ? .none : .bounce) {
                         selectedPhotoData = nil
                         selectedPhotoItem = nil
                     }
@@ -244,7 +247,7 @@ struct AddFriendView: View {
                         interval: interval,
                         isSelected: selectedInterval == interval
                     ) {
-                        withAnimation(.bounce) {
+                        withAnimation(reduceMotion ? .none : .bounce) {
                             selectedInterval = interval
                         }
                     }

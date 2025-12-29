@@ -28,6 +28,7 @@ struct ConfettiView: View {
     var duration: Double = 1.5
     var onComplete: (() -> Void)?
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var particles: [ConfettiParticle] = []
     @State private var animationProgress: Double = 0
 
@@ -87,12 +88,25 @@ struct ConfettiView: View {
             }
             .onChange(of: isActive) { oldValue, newValue in
                 if newValue && !oldValue {
-                    startAnimation(in: geometry.size)
+                    if reduceMotion {
+                        // Skip animation, just call completion
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            onComplete?()
+                        }
+                    } else {
+                        startAnimation(in: geometry.size)
+                    }
                 }
             }
             .onAppear {
                 if isActive {
-                    startAnimation(in: geometry.size)
+                    if reduceMotion {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            onComplete?()
+                        }
+                    } else {
+                        startAnimation(in: geometry.size)
+                    }
                 }
             }
         }
@@ -211,6 +225,7 @@ struct ConfettiCelebration: ViewModifier {
     var duration: Double = 1.5
     var onComplete: (() -> Void)?
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showMessage = false
 
     func body(content: Content) -> some View {
@@ -235,13 +250,14 @@ struct ConfettiCelebration: ViewModifier {
             }
             .onChange(of: isActive) { oldValue, newValue in
                 if newValue {
-                    withAnimation(.bounce) {
+                    withAnimation(reduceMotion ? .none : .bounce) {
                         showMessage = true
                     }
 
                     // Hide message slightly before confetti ends
-                    DispatchQueue.main.asyncAfter(deadline: .now() + duration * 0.8) {
-                        withAnimation(.easeOut(duration: 0.3)) {
+                    let delay = reduceMotion ? 0.3 : duration * 0.8
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        withAnimation(reduceMotion ? .none : .easeOut(duration: 0.3)) {
                             showMessage = false
                         }
                     }

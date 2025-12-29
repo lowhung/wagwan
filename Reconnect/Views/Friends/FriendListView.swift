@@ -3,6 +3,7 @@ import SwiftUI
 
 struct FriendListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: \Friend.name) private var friends: [Friend]
 
     @State private var showingAddFriend = false
@@ -190,7 +191,7 @@ struct FriendListView: View {
                 icon: "exclamationmark.triangle.fill",
                 isSelected: selectedFilter == .overdue
             ) {
-                withAnimation(.snappy) {
+                withAnimation(reduceMotion ? .none : .snappy) {
                     selectedFilter = selectedFilter == .overdue ? .all : .overdue
                 }
             }
@@ -202,7 +203,7 @@ struct FriendListView: View {
                 icon: "clock.fill",
                 isSelected: selectedFilter == .dueSoon
             ) {
-                withAnimation(.snappy) {
+                withAnimation(reduceMotion ? .none : .snappy) {
                     selectedFilter = selectedFilter == .dueSoon ? .all : .dueSoon
                 }
             }
@@ -214,7 +215,7 @@ struct FriendListView: View {
                 icon: "checkmark.circle.fill",
                 isSelected: selectedFilter == .onTrack
             ) {
-                withAnimation(.snappy) {
+                withAnimation(reduceMotion ? .none : .snappy) {
                     selectedFilter = selectedFilter == .onTrack ? .all : .onTrack
                 }
             }
@@ -230,9 +231,10 @@ struct FriendListView: View {
                         icon: option.icon,
                         count: countForFilter(option),
                         color: option.color,
-                        isSelected: selectedFilter == option
+                        isSelected: selectedFilter == option,
+                        reduceMotion: reduceMotion
                     ) {
-                        withAnimation(.snappy) {
+                        withAnimation(reduceMotion ? .none : .snappy) {
                             selectedFilter = option
                         }
                     }
@@ -319,6 +321,7 @@ private struct StatusSummaryCard: View {
     let isSelected: Bool
     let action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPulsing = false
     @State private var previousCount: Int = 0
     @State private var isBouncing = false
@@ -374,15 +377,15 @@ private struct StatusSummaryCard: View {
         )
         .onAppear {
             previousCount = count
-            if isOverdue && count > 0 {
+            if isOverdue && count > 0 && !reduceMotion {
                 startPulseAnimation()
             }
         }
         .onChange(of: count) { oldValue, newValue in
-            if oldValue != newValue {
+            if oldValue != newValue && !reduceMotion {
                 triggerBounce()
             }
-            if isOverdue {
+            if isOverdue && !reduceMotion {
                 if newValue > 0 && oldValue == 0 {
                     startPulseAnimation()
                 }
@@ -391,6 +394,7 @@ private struct StatusSummaryCard: View {
     }
 
     private func startPulseAnimation() {
+        guard !reduceMotion else { return }
         withAnimation(
             .easeInOut(duration: 1.5)
                 .repeatForever(autoreverses: false)
@@ -400,6 +404,7 @@ private struct StatusSummaryCard: View {
     }
 
     private func triggerBounce() {
+        guard !reduceMotion else { return }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
             isBouncing = true
         }
@@ -417,6 +422,7 @@ private struct FilterPill: View {
     let count: Int?
     let color: Color
     let isSelected: Bool
+    var reduceMotion: Bool = false
     var action: () -> Void
 
     @State private var isPressed = false
@@ -473,8 +479,10 @@ private struct FilterPill: View {
             .scaleEffect(isPressed ? 0.95 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(title)\(count.map { ", \($0) friends" } ?? "")")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+            withAnimation(reduceMotion ? .none : .spring(response: 0.2, dampingFraction: 0.6)) {
                 isPressed = pressing
             }
         }, perform: {})
@@ -488,6 +496,7 @@ private struct EmptyFilterView: View {
     let filterOption: FriendListView.FilterOption
     let onClearFilter: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
 
     private var iconName: String {
@@ -547,6 +556,7 @@ private struct EmptyFilterView: View {
         .padding(.vertical, Spacing.xl)
         .frame(maxWidth: .infinity)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(
                 .easeInOut(duration: 1.5)
                     .repeatForever(autoreverses: true)
@@ -562,6 +572,7 @@ private struct EmptyFilterView: View {
 private struct EmptyFriendsView: View {
     var onAddFriend: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
     @State private var heartsVisible = false
 
@@ -639,14 +650,19 @@ private struct EmptyFriendsView: View {
         }
         .padding(Spacing.xl)
         .onAppear {
-            withAnimation(
-                .easeInOut(duration: 2.0)
-                    .repeatForever(autoreverses: true)
-            ) {
-                isAnimating = true
-            }
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.3)) {
+            if reduceMotion {
+                isAnimating = false
                 heartsVisible = true
+            } else {
+                withAnimation(
+                    .easeInOut(duration: 2.0)
+                        .repeatForever(autoreverses: true)
+                ) {
+                    isAnimating = true
+                }
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.3)) {
+                    heartsVisible = true
+                }
             }
         }
     }
@@ -671,6 +687,7 @@ private struct EmptyFriendsView: View {
 private struct NoSearchResultsView: View {
     let searchText: String
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
 
     var body: some View {
@@ -730,6 +747,7 @@ private struct NoSearchResultsView: View {
         }
         .padding(Spacing.xl)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(
                 .easeInOut(duration: 1.5)
                     .repeatForever(autoreverses: true)

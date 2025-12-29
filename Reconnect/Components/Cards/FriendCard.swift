@@ -4,7 +4,41 @@ struct FriendCard: View {
     let friend: Friend
     var onTap: () -> Void = {}
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPressed = false
+
+    // MARK: - Accessibility
+
+    private var accessibilityLabel: String {
+        var label = friend.name
+
+        // Status
+        label += ", \(friend.status.label)"
+
+        // Last contact info
+        if let days = friend.daysSinceLastContact {
+            switch days {
+            case 0:
+                label += ", contacted today"
+            case 1:
+                label += ", contacted yesterday"
+            default:
+                label += ", contacted \(days) days ago"
+            }
+        } else {
+            label += ", never contacted"
+        }
+
+        // Due info
+        let daysUntilDue = friend.daysUntilDue
+        if daysUntilDue < 0 {
+            label += ", \(abs(daysUntilDue)) days overdue"
+        } else if daysUntilDue <= 3 {
+            label += ", due in \(daysUntilDue) days"
+        }
+
+        return label
+    }
 
     var body: some View {
         Button(action: {
@@ -41,10 +75,14 @@ struct FriendCard: View {
             .scaleEffect(isPressed ? 0.98 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint("Double tap to view details")
+        .accessibilityAddTraits(.isButton)
         .onLongPressGesture(
             minimumDuration: .infinity,
             pressing: { pressing in
-                withAnimation(.snappy) {
+                withAnimation(reduceMotion ? .none : .snappy) {
                     isPressed = pressing
                 }
             }, perform: {})

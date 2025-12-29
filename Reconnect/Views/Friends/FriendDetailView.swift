@@ -4,6 +4,7 @@ import SwiftUI
 struct FriendDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @Bindable var friend: Friend
 
@@ -141,7 +142,7 @@ struct FriendDetailView: View {
     private var quickActions: some View {
         HStack(spacing: Spacing.md) {
             if friend.phoneNumber != nil || friend.email != nil {
-                IconButton(icon: "phone.fill", color: .sage, size: 56) {
+                IconButton(icon: "phone.fill", color: .sage, size: 56, accessibilityLabel: "Contact \(friend.name)") {
                     showingCallOptions = true
                 }
             }
@@ -150,7 +151,7 @@ struct FriendDetailView: View {
                 showingLogContact = true
             }
 
-            IconButton(icon: "calendar.badge.plus", color: .lavender, size: 56) {
+            IconButton(icon: "calendar.badge.plus", color: .lavender, size: 56, accessibilityLabel: "Add calendar reminder for \(friend.name)") {
                 createCalendarReminder()
             }
         }
@@ -395,6 +396,7 @@ private struct HistoryRow: View {
 struct LogContactView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let friend: Friend
 
@@ -423,7 +425,7 @@ struct LogContactView: View {
                                     method: method,
                                     isSelected: selectedMethod == method
                                 ) {
-                                    withAnimation(.bounce) {
+                                    withAnimation(reduceMotion ? .none : .bounce) {
                                         selectedMethod = method
                                     }
                                 }

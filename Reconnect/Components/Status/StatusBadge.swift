@@ -31,6 +31,8 @@ struct StatusBadge: View {
         .background(color.opacity(0.15))
         .foregroundStyle(color)
         .clipShape(Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Status: \(status.label)")
     }
 }
 
