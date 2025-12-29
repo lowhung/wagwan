@@ -138,9 +138,21 @@ struct FriendListView: View {
                             } else {
                                 LazyVStack(spacing: Spacing.sm) {
                                     ForEach(filteredFriends) { friend in
-                                        FriendCard(friend: friend) {
-                                            selectedFriend = friend
-                                        }
+                                        FriendCard(
+                                            friend: friend,
+                                            onTap: {
+                                                selectedFriend = friend
+                                            },
+                                            onLogContact: {
+                                                quickLogContact(for: friend)
+                                            },
+                                            onCall: friend.phoneNumber != nil ? {
+                                                callFriend(friend)
+                                            } : nil,
+                                            onMessage: friend.phoneNumber != nil ? {
+                                                messageFriend(friend)
+                                            } : nil
+                                        )
                                     }
                                 }
                             }
@@ -255,6 +267,28 @@ struct FriendListView: View {
         case .onTrack:
             return statusCounts.onTrack
         }
+    }
+
+    // MARK: - Quick Actions
+
+    private func quickLogContact(for friend: Friend) {
+        let log = ContactLog(contactedAt: Date(), method: .other, notes: nil)
+        log.friend = friend
+        friend.contactLogs.append(log)
+        friend.lastContactedAt = Date()
+        HapticService.shared.success()
+    }
+
+    private func callFriend(_ friend: Friend) {
+        guard let phone = friend.phoneNumber,
+              let url = URL(string: "tel:\(phone)") else { return }
+        UIApplication.shared.open(url)
+    }
+
+    private func messageFriend(_ friend: Friend) {
+        guard let phone = friend.phoneNumber,
+              let url = URL(string: "sms:\(phone)") else { return }
+        UIApplication.shared.open(url)
     }
 }
 
