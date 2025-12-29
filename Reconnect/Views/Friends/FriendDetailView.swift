@@ -639,25 +639,50 @@ private struct MethodButton: View {
     let isSelected: Bool
     var action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isPressed = false
+
     var body: some View {
         Button(action: {
             HapticService.shared.selection()
             action()
         }) {
-            VStack(spacing: Spacing.xxs) {
-                Image(systemName: method.icon)
-                    .font(.title3)
+            VStack(spacing: Spacing.xs) {
+                Text(method.emoji)
+                    .font(.system(size: 32))
+                    .scaleEffect(isSelected ? 1.15 : 1.0)
+
                 Text(method.label)
                     .font(.labelSmall)
                     .lineLimit(1)
+                    .foregroundStyle(isSelected ? Color.textPrimary : Color.textSecondary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.sm)
-            .background(isSelected ? Color.coral : Color.cardBackground)
-            .foregroundStyle(isSelected ? .white : Color.textSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+            .padding(.vertical, Spacing.md)
+            .background(
+                ZStack {
+                    Color.cardBackground
+
+                    if isSelected {
+                        // Glow effect
+                        RoundedRectangle(cornerRadius: CornerRadius.medium)
+                            .fill(Color.coral.opacity(0.15))
+
+                        RoundedRectangle(cornerRadius: CornerRadius.medium)
+                            .stroke(Color.coral, lineWidth: 2)
+                    }
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .scaleEffect(isPressed ? 0.95 : 1.0)
         }
         .buttonStyle(.plain)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            withAnimation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.6)) {
+                isPressed = pressing
+            }
+        }, perform: {})
+        .accessibilityLabel("\(method.label), \(isSelected ? "selected" : "not selected")")
     }
 }
 

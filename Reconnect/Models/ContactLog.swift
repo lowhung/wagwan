@@ -37,12 +37,12 @@ enum ContactMethod: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .call: return "Phone Call"
+        case .call: return "Call"
         case .text: return "Text"
-        case .inPerson: return "In Person"
-        case .video: return "Video Call"
+        case .inPerson: return "Hangout"
+        case .video: return "Video"
         case .email: return "Email"
-        case .social: return "Social Media"
+        case .social: return "Social"
         case .other: return "Other"
         }
     }
@@ -56,6 +56,18 @@ enum ContactMethod: String, Codable, CaseIterable, Identifiable {
         case .email: return "envelope.fill"
         case .social: return "at"
         case .other: return "ellipsis.circle.fill"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .call: return "📞"
+        case .text: return "💬"
+        case .inPerson: return "🤗"
+        case .video: return "📹"
+        case .email: return "✉️"
+        case .social: return "📱"
+        case .other: return "✨"
         }
     }
 }
