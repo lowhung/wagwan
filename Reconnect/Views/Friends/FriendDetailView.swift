@@ -122,25 +122,11 @@ struct FriendDetailView: View {
 
     private var headerSection: some View {
         VStack(spacing: Spacing.md) {
-            // Avatar
-            ZStack {
-                Circle()
-                    .fill(friend.avatarColor.opacity(0.2))
-
-                if let photoData = friend.photoData,
-                    let uiImage = UIImage(data: photoData)
-                {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(Circle())
-                } else {
-                    Text(friend.initials)
-                        .font(.system(size: 44, weight: .bold, design: .rounded))
-                        .foregroundStyle(friend.avatarColor)
-                }
-            }
-            .frame(width: 120, height: 120)
+            // Avatar with friendship health ring
+            FriendshipHealthRing(
+                friend: friend,
+                reduceMotion: reduceMotion
+            )
 
             // Name and status
             VStack(spacing: Spacing.xs) {
@@ -295,7 +281,7 @@ struct FriendDetailView: View {
                             Spacer()
                         }
                         .padding(.vertical, Spacing.sm)
-                        .padding(.leading, 44) // Align with content
+                        .padding(.leading, 44)  // Align with content
                     }
                 }
                 .padding(.vertical, Spacing.xs)
@@ -390,6 +376,112 @@ struct FriendDetailView: View {
     }
 }
 
+// MARK: - Friendship Health Ring
+
+private struct FriendshipHealthRing: View {
+    let friend: Friend
+    let reduceMotion: Bool
+
+    @State private var animatedProgress: CGFloat = 0
+
+    private var healthProgress: CGFloat {
+        // Calculate health based on days until due
+        let daysUntilDue = friend.daysUntilDue
+        let interval = friend.reminderIntervalDays
+
+        if daysUntilDue < 0 {
+            // Overdue - show minimal progress
+            return max(0.05, 1.0 - (CGFloat(abs(daysUntilDue)) / CGFloat(interval)))
+        } else {
+            // On track - full is just contacted, depletes as due date approaches
+            return CGFloat(daysUntilDue) / CGFloat(interval)
+        }
+    }
+
+    private var ringColor: Color {
+        switch friend.status {
+        case .overdue:
+            return .statusOverdue
+        case .dueSoon:
+            return .statusDueSoon
+        case .onTrack:
+            return .statusOnTrack
+        }
+    }
+
+    private var ringGradient: AngularGradient {
+        AngularGradient(
+            gradient: Gradient(colors: [
+                ringColor.opacity(0.3),
+                ringColor,
+            ]),
+            center: .center,
+            startAngle: .degrees(-90),
+            endAngle: .degrees(-90 + 360 * animatedProgress)
+        )
+    }
+
+    var body: some View {
+        ZStack {
+            // Background ring track
+            Circle()
+                .stroke(Color.warmGrayDark.opacity(0.15), lineWidth: 6)
+                .frame(width: 136, height: 136)
+
+            // Progress ring
+            Circle()
+                .trim(from: 0, to: animatedProgress)
+                .stroke(
+                    ringColor,
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                )
+                .frame(width: 136, height: 136)
+                .rotationEffect(.degrees(-90))
+
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(friend.avatarColor.opacity(0.2))
+
+                if let photoData = friend.photoData,
+                    let uiImage = UIImage(data: photoData)
+                {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
+                } else {
+                    Text(friend.initials)
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .foregroundStyle(friend.avatarColor)
+                }
+            }
+            .frame(width: 120, height: 120)
+
+            // Status indicator dot
+            Circle()
+                .fill(ringColor)
+                .frame(width: 16, height: 16)
+                .overlay(
+                    Circle()
+                        .stroke(Color.appBackground, lineWidth: 3)
+                )
+                .offset(y: -68)
+                .rotationEffect(.degrees(360 * animatedProgress))
+        }
+        .onAppear {
+            withAnimation(reduceMotion ? .none : .spring(response: 0.8, dampingFraction: 0.7)) {
+                animatedProgress = healthProgress
+            }
+        }
+        .onChange(of: friend.lastContactedAt) { _, _ in
+            withAnimation(reduceMotion ? .none : .spring(response: 0.6, dampingFraction: 0.7)) {
+                animatedProgress = healthProgress
+            }
+        }
+    }
+}
+
 // MARK: - Supporting Views
 
 private struct ContactInfoRow: View {
@@ -465,7 +557,7 @@ private struct StreakCard: View {
                             guard !reduceMotion else { return }
                             withAnimation(
                                 .easeInOut(duration: 0.8)
-                                .repeatForever(autoreverses: true)
+                                    .repeatForever(autoreverses: true)
                             ) {
                                 isAnimating = true
                             }
@@ -632,8 +724,9 @@ struct LogContactView: View {
                                 .font(.headlineSmall)
                                 .foregroundStyle(Color.textSecondary)
 
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: Spacing.xs)
-                            {
+                            LazyVGrid(
+                                columns: [GridItem(.adaptive(minimum: 80))], spacing: Spacing.xs
+                            ) {
                                 ForEach(ContactMethod.allCases) { method in
                                     MethodButton(
                                         method: method,
@@ -680,7 +773,9 @@ struct LogContactView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: CornerRadius.medium)
-                                        .stroke(isNotesFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
+                                        .stroke(
+                                            isNotesFocused ? Color.coral.opacity(0.5) : Color.clear,
+                                            lineWidth: 2)
                                 )
                                 .focused($isNotesFocused)
                                 .submitLabel(.done)
@@ -786,11 +881,14 @@ private struct MethodButton: View {
             .scaleEffect(isPressed ? 0.95 : 1.0)
         }
         .buttonStyle(.plain)
-        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.6)) {
-                isPressed = pressing
-            }
-        }, perform: {})
+        .onLongPressGesture(
+            minimumDuration: .infinity,
+            pressing: { pressing in
+                withAnimation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.6)) {
+                    isPressed = pressing
+                }
+            }, perform: {}
+        )
         .accessibilityLabel("\(method.label), \(isSelected ? "selected" : "not selected")")
     }
 }
