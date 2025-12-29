@@ -54,18 +54,12 @@ struct OnboardingView: View {
 
                 // Bottom section
                 VStack(spacing: Spacing.lg) {
-                    // Page indicators
-                    HStack(spacing: Spacing.xs) {
-                        ForEach(0..<pages.count, id: \.self) { index in
-                            Circle()
-                                .fill(index == currentPage ? Color.coral : Color.coral.opacity(0.3))
-                                .frame(
-                                    width: index == currentPage ? 10 : 8,
-                                    height: index == currentPage ? 10 : 8
-                                )
-                                .animation(reduceMotion ? .none : .bounce, value: currentPage)
-                        }
-                    }
+                    // Page indicators - playful hearts with progress trail
+                    PageIndicator(
+                        pageCount: pages.count,
+                        currentPage: currentPage,
+                        reduceMotion: reduceMotion
+                    )
 
                     // Buttons
                     if currentPage == pages.count - 1 {
@@ -167,6 +161,65 @@ private struct OnboardingPage {
     let iconColor: Color
     let title: String
     let subtitle: String
+}
+
+// MARK: - Page Indicator
+
+private struct PageIndicator: View {
+    let pageCount: Int
+    let currentPage: Int
+    let reduceMotion: Bool
+
+    var body: some View {
+        HStack(spacing: Spacing.sm) {
+            ForEach(0..<pageCount, id: \.self) { index in
+                HeartIndicator(
+                    isActive: index == currentPage,
+                    isPast: index < currentPage,
+                    reduceMotion: reduceMotion
+                )
+            }
+        }
+    }
+}
+
+private struct HeartIndicator: View {
+    let isActive: Bool
+    let isPast: Bool
+    let reduceMotion: Bool
+
+    @State private var bounceScale: CGFloat = 1.0
+
+    var body: some View {
+        Image(systemName: isPast || isActive ? "heart.fill" : "heart")
+            .font(.system(size: isActive ? 18 : 14))
+            .foregroundStyle(heartColor)
+            .scaleEffect(bounceScale)
+            .animation(reduceMotion ? .none : .bounce, value: isActive)
+            .onChange(of: isActive) { _, newValue in
+                if newValue && !reduceMotion {
+                    // Bounce animation when becoming active
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                        bounceScale = 1.3
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            bounceScale = 1.0
+                        }
+                    }
+                }
+            }
+    }
+
+    private var heartColor: Color {
+        if isActive {
+            return .coral
+        } else if isPast {
+            return .coral.opacity(0.6)
+        } else {
+            return .coral.opacity(0.3)
+        }
+    }
 }
 
 #Preview {
