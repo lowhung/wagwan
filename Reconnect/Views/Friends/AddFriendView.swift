@@ -50,7 +50,8 @@ struct AddFriendView: View {
                                 title: "Name",
                                 placeholder: "Friend's name",
                                 text: $name,
-                                icon: "person.fill"
+                                icon: "person.fill",
+                                helperText: "Who do you want to stay in touch with?"
                             )
 
                             FormField(
@@ -58,7 +59,9 @@ struct AddFriendView: View {
                                 placeholder: "Phone number (optional)",
                                 text: $phoneNumber,
                                 icon: "phone.fill",
-                                keyboardType: .phonePad
+                                keyboardType: .phonePad,
+                                helperText: "So you can call them with one tap",
+                                validation: .phone
                             )
 
                             FormField(
@@ -66,7 +69,9 @@ struct AddFriendView: View {
                                 placeholder: "Email address (optional)",
                                 text: $email,
                                 icon: "envelope.fill",
-                                keyboardType: .emailAddress
+                                keyboardType: .emailAddress,
+                                helperText: "For quick email check-ins",
+                                validation: .email
                             )
 
                             // Reminder interval picker
@@ -77,7 +82,10 @@ struct AddFriendView: View {
                                 placeholder: "Any notes about this friend (optional)",
                                 text: $notes,
                                 icon: "note.text",
-                                isMultiline: true
+                                isMultiline: true,
+                                helperText: "Birthday? Favorite coffee? Anything helpful!",
+                                showCharacterCount: true,
+                                maxCharacters: 200
                             )
                         }
                         .padding(.horizontal, Spacing.md)
@@ -256,6 +264,41 @@ struct AddFriendView: View {
 
 // MARK: - Supporting Views
 
+private enum FieldValidation {
+    case none
+    case phone
+    case email
+
+    func validate(_ text: String) -> ValidationResult {
+        guard !text.isEmpty else { return .empty }
+
+        switch self {
+        case .none:
+            return .valid
+        case .phone:
+            let digits = text.filter { $0.isNumber }
+            if digits.count >= 7 {
+                return .valid
+            } else {
+                return .invalid("Add a few more digits")
+            }
+        case .email:
+            let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            if text.contains(emailRegex) {
+                return .valid
+            } else {
+                return .invalid("Hmm, that doesn't look quite right")
+            }
+        }
+    }
+}
+
+private enum ValidationResult: Equatable {
+    case empty
+    case valid
+    case invalid(String)
+}
+
 private struct FormField: View {
     let title: String
     let placeholder: String
@@ -263,6 +306,30 @@ private struct FormField: View {
     var icon: String
     var keyboardType: UIKeyboardType = .default
     var isMultiline: Bool = false
+    var helperText: String? = nil
+    var validation: FieldValidation = .none
+    var showCharacterCount: Bool = false
+    var maxCharacters: Int = 0
+
+    @FocusState private var isFocused: Bool
+
+    private var validationResult: ValidationResult {
+        validation.validate(text)
+    }
+
+    private var displayHelperText: String? {
+        if case .invalid(let message) = validationResult {
+            return message
+        }
+        return helperText
+    }
+
+    private var helperTextColor: Color {
+        if case .invalid = validationResult {
+            return .coral
+        }
+        return .warmGrayDark.opacity(0.7)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -277,16 +344,56 @@ private struct FormField: View {
                     .padding(Spacing.sm)
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CornerRadius.medium)
+                            .stroke(isFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
+                    )
+                    .focused($isFocused)
             } else {
-                TextField(placeholder, text: $text)
-                    .font(.bodyLarge)
-                    .keyboardType(keyboardType)
-                    .textContentType(contentType)
-                    .autocapitalization(keyboardType == .emailAddress ? .none : .words)
-                    .padding(Spacing.sm)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                HStack {
+                    TextField(placeholder, text: $text)
+                        .font(.bodyLarge)
+                        .keyboardType(keyboardType)
+                        .textContentType(contentType)
+                        .autocapitalization(keyboardType == .emailAddress ? .none : .words)
+                        .focused($isFocused)
+
+                    // Validation indicator
+                    if !text.isEmpty && validation != .none {
+                        Image(systemName: validationResult == .valid ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                            .foregroundStyle(validationResult == .valid ? Color.sage : Color.coral.opacity(0.7))
+                            .font(.body)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
+                .padding(Spacing.sm)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.medium)
+                        .stroke(isFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
+                )
+                .animation(.snappy, value: validationResult)
             }
+
+            // Helper text and character count
+            HStack {
+                if let helper = displayHelperText {
+                    Text(helper)
+                        .font(.labelSmall)
+                        .foregroundStyle(helperTextColor)
+                        .transition(.opacity)
+                }
+
+                Spacer()
+
+                if showCharacterCount && maxCharacters > 0 {
+                    Text("\(text.count)/\(maxCharacters)")
+                        .font(.labelSmall)
+                        .foregroundStyle(text.count > maxCharacters ? Color.coral : Color.warmGrayDark.opacity(0.5))
+                }
+            }
+            .animation(.snappy, value: validationResult)
         }
     }
 
