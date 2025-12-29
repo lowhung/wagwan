@@ -15,6 +15,32 @@ struct FriendListView: View {
         case overdue = "Overdue"
         case dueSoon = "Due Soon"
         case onTrack = "On Track"
+
+        var icon: String? {
+            switch self {
+            case .all:
+                return "square.grid.2x2"
+            case .overdue:
+                return "exclamationmark.triangle.fill"
+            case .dueSoon:
+                return "clock.fill"
+            case .onTrack:
+                return "checkmark.circle.fill"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .all:
+                return .coral
+            case .overdue:
+                return .statusOverdue
+            case .dueSoon:
+                return .statusDueSoon
+            case .onTrack:
+                return .statusOnTrack
+            }
+        }
     }
 
     private var filteredFriends: [Friend] {
@@ -200,6 +226,9 @@ struct FriendListView: View {
                 ForEach(FilterOption.allCases, id: \.self) { option in
                     FilterPill(
                         title: option.rawValue,
+                        icon: option.icon,
+                        count: countForFilter(option),
+                        color: option.color,
                         isSelected: selectedFilter == option
                     ) {
                         withAnimation(.snappy) {
@@ -208,6 +237,19 @@ struct FriendListView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func countForFilter(_ option: FilterOption) -> Int? {
+        switch option {
+        case .all:
+            return nil
+        case .overdue:
+            return statusCounts.overdue
+        case .dueSoon:
+            return statusCounts.dueSoon
+        case .onTrack:
+            return statusCounts.onTrack
         }
     }
 }
@@ -370,21 +412,71 @@ private struct StatusSummaryCard: View {
 
 private struct FilterPill: View {
     let title: String
+    let icon: String?
+    let count: Int?
+    let color: Color
     let isSelected: Bool
     var action: () -> Void
 
+    @State private var isPressed = false
+
+    private var displayColor: Color {
+        isSelected ? color : Color.warmGrayDark
+    }
+
+    private var backgroundColor: Color {
+        isSelected ? color.opacity(0.15) : Color.white
+    }
+
+    private var borderColor: Color {
+        isSelected ? color : Color.clear
+    }
+
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.labelMedium)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.xs)
-                .background(isSelected ? Color.coral : Color.white)
-                .foregroundStyle(isSelected ? .white : Color.warmGrayDark)
-                .clipShape(Capsule())
-                .softShadow()
+        Button(action: {
+            HapticService.shared.selection()
+            action()
+        }) {
+            HStack(spacing: Spacing.xxs) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(displayColor)
+                }
+
+                Text(title)
+                    .font(.labelMedium)
+                    .foregroundStyle(displayColor)
+
+                if let count = count, count > 0 {
+                    Text("\(count)")
+                        .font(.labelSmall)
+                        .foregroundStyle(isSelected ? .white : displayColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? color : color.opacity(0.2))
+                        )
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.xs)
+            .background(backgroundColor)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(borderColor, lineWidth: 1.5)
+            )
+            .softShadow()
+            .scaleEffect(isPressed ? 0.95 : 1.0)
         }
         .buttonStyle(.plain)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                isPressed = pressing
+            }
+        }, perform: {})
     }
 }
 
