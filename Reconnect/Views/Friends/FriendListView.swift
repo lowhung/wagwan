@@ -147,6 +147,7 @@ struct FriendListView: View {
                         .padding(.horizontal, Spacing.md)
                         .padding(.bottom, Spacing.xxl)
                     }
+                    .scrollDismissesKeyboard(.interactively)
                 }
             }
             .navigationTitle("Friends")

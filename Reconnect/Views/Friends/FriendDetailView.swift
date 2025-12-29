@@ -402,6 +402,7 @@ struct LogContactView: View {
     @State private var notes = ""
     @State private var contactDate = Date()
     @State private var showConfetti = false
+    @FocusState private var isNotesFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -461,6 +462,13 @@ struct LogContactView: View {
                             .padding(Spacing.sm)
                             .background(Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                                    .stroke(isNotesFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
+                            )
+                            .focused($isNotesFocused)
+                            .submitLabel(.done)
+                            .onSubmit { isNotesFocused = false }
                     }
 
                     Spacer()
@@ -470,7 +478,11 @@ struct LogContactView: View {
                     }
                 }
                 .padding(Spacing.md)
+                .onTapGesture {
+                    isNotesFocused = false
+                }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Log Contact")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -18,6 +18,12 @@ struct AddFriendView: View {
     @State private var selectedPhotoData: Data?
     @State private var isAvatarBouncing = false
 
+    // Focus management
+    enum Field: Hashable {
+        case name, phone, email, notes
+    }
+    @FocusState private var focusedField: Field?
+
     var existingFriend: Friend?
 
     private var isEditing: Bool { existingFriend != nil }
@@ -51,7 +57,10 @@ struct AddFriendView: View {
                                 placeholder: "Friend's name",
                                 text: $name,
                                 icon: "person.fill",
-                                helperText: "Who do you want to stay in touch with?"
+                                helperText: "Who do you want to stay in touch with?",
+                                focusedField: $focusedField,
+                                field: .name,
+                                onSubmit: { focusedField = .phone }
                             )
 
                             FormField(
@@ -61,7 +70,10 @@ struct AddFriendView: View {
                                 icon: "phone.fill",
                                 keyboardType: .phonePad,
                                 helperText: "So you can call them with one tap",
-                                validation: .phone
+                                validation: .phone,
+                                focusedField: $focusedField,
+                                field: .phone,
+                                onSubmit: { focusedField = .email }
                             )
 
                             FormField(
@@ -71,7 +83,10 @@ struct AddFriendView: View {
                                 icon: "envelope.fill",
                                 keyboardType: .emailAddress,
                                 helperText: "For quick email check-ins",
-                                validation: .email
+                                validation: .email,
+                                focusedField: $focusedField,
+                                field: .email,
+                                onSubmit: { focusedField = .notes }
                             )
 
                             // Reminder interval picker
@@ -85,7 +100,10 @@ struct AddFriendView: View {
                                 isMultiline: true,
                                 helperText: "Birthday? Favorite coffee? Anything helpful!",
                                 showCharacterCount: true,
-                                maxCharacters: 200
+                                maxCharacters: 200,
+                                focusedField: $focusedField,
+                                field: .notes,
+                                onSubmit: { focusedField = nil }
                             )
                         }
                         .padding(.horizontal, Spacing.md)
@@ -101,6 +119,18 @@ struct AddFriendView: View {
                         .padding(.top, Spacing.md)
                     }
                     .padding(.vertical, Spacing.lg)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .onAppear {
+                    // Auto-focus name field for new friends
+                    if !isEditing {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            focusedField = .name
+                        }
+                    }
+                }
+                .onTapGesture {
+                    focusedField = nil
                 }
             }
             .navigationTitle(isEditing ? "Edit Friend" : "Add Friend")
@@ -310,8 +340,85 @@ private struct FormField: View {
     var validation: FieldValidation = .none
     var showCharacterCount: Bool = false
     var maxCharacters: Int = 0
+    var focusedField: FocusState<AddFriendView.Field?>.Binding?
+    var field: AddFriendView.Field?
+    var onSubmit: (() -> Void)?
 
     @FocusState private var isFocused: Bool
+
+    private var isLastField: Bool {
+        field == .notes
+    }
+
+    @ViewBuilder
+    private var multilineField: some View {
+        TextField(placeholder, text: $text, axis: .vertical)
+            .font(.bodyLarge)
+            .lineLimit(3...6)
+            .padding(Spacing.sm)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .stroke(isFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
+            )
+            .focused($isFocused)
+            .submitLabel(.done)
+            .onSubmit { onSubmit?() }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(isLastField ? "Done" : "Next") {
+                        onSubmit?()
+                    }
+                    .foregroundStyle(Color.coral)
+                }
+            }
+            .onChange(of: isFocused) { _, newValue in
+                if let focusedField = focusedField, let field = field {
+                    if newValue {
+                        focusedField.wrappedValue = field
+                    }
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var singleLineField: some View {
+        HStack {
+            TextField(placeholder, text: $text)
+                .font(.bodyLarge)
+                .keyboardType(keyboardType)
+                .textContentType(contentType)
+                .autocapitalization(keyboardType == .emailAddress ? .none : .words)
+                .focused($isFocused)
+                .submitLabel(isLastField ? .done : .next)
+                .onSubmit { onSubmit?() }
+
+            // Validation indicator
+            if !text.isEmpty && validation != .none {
+                Image(systemName: validationResult == .valid ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                    .foregroundStyle(validationResult == .valid ? Color.sage : Color.coral.opacity(0.7))
+                    .font(.body)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .padding(Spacing.sm)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .stroke(isFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
+        )
+        .animation(.snappy, value: validationResult)
+        .onChange(of: isFocused) { _, newValue in
+            if let focusedField = focusedField, let field = field {
+                if newValue {
+                    focusedField.wrappedValue = field
+                }
+            }
+        }
+    }
 
     private var validationResult: ValidationResult {
         validation.validate(text)
@@ -338,42 +445,9 @@ private struct FormField: View {
                 .foregroundStyle(Color.warmGrayDark)
 
             if isMultiline {
-                TextField(placeholder, text: $text, axis: .vertical)
-                    .font(.bodyLarge)
-                    .lineLimit(3...6)
-                    .padding(Spacing.sm)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.medium)
-                            .stroke(isFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
-                    )
-                    .focused($isFocused)
+                multilineField
             } else {
-                HStack {
-                    TextField(placeholder, text: $text)
-                        .font(.bodyLarge)
-                        .keyboardType(keyboardType)
-                        .textContentType(contentType)
-                        .autocapitalization(keyboardType == .emailAddress ? .none : .words)
-                        .focused($isFocused)
-
-                    // Validation indicator
-                    if !text.isEmpty && validation != .none {
-                        Image(systemName: validationResult == .valid ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                            .foregroundStyle(validationResult == .valid ? Color.sage : Color.coral.opacity(0.7))
-                            .font(.body)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-                }
-                .padding(Spacing.sm)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-                .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.medium)
-                        .stroke(isFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
-                )
-                .animation(.snappy, value: validationResult)
+                singleLineField
             }
 
             // Helper text and character count
@@ -394,6 +468,11 @@ private struct FormField: View {
                 }
             }
             .animation(.snappy, value: validationResult)
+        }
+        .onChange(of: focusedField?.wrappedValue) { _, newValue in
+            if let field = field {
+                isFocused = newValue == field
+            }
         }
     }
 
