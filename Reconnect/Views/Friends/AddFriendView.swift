@@ -1,6 +1,8 @@
-import SwiftUI
-import SwiftData
+import Contacts
+import ContactsUI
 import PhotosUI
+import SwiftData
+import SwiftUI
 
 struct AddFriendView: View {
     @Environment(\.modelContext) private var modelContext
@@ -25,6 +27,9 @@ struct AddFriendView: View {
     }
     @FocusState private var focusedField: Field?
 
+    // Contact picker
+    @State private var showingContactPicker = false
+
     var existingFriend: Friend?
 
     private var isEditing: Bool { existingFriend != nil }
@@ -36,7 +41,8 @@ struct AddFriendView: View {
             _phoneNumber = State(initialValue: friend.phoneNumber ?? "")
             _email = State(initialValue: friend.email ?? "")
             _notes = State(initialValue: friend.notes ?? "")
-            _selectedInterval = State(initialValue: ReminderInterval(rawValue: friend.reminderIntervalDays) ?? .biweekly)
+            _selectedInterval = State(
+                initialValue: ReminderInterval(rawValue: friend.reminderIntervalDays) ?? .biweekly)
             _selectedPhotoData = State(initialValue: friend.photoData)
         }
     }
@@ -50,6 +56,21 @@ struct AddFriendView: View {
                     VStack(spacing: Spacing.lg) {
                         // Avatar preview
                         avatarPreview
+
+                        // Import from Contacts button (only for new friends)
+                        if !isEditing {
+                            Button {
+                                showingContactPicker = true
+                            } label: {
+                                Label(
+                                    "Import from Contacts",
+                                    systemImage: "person.crop.circle.badge.plus"
+                                )
+                                .font(.labelLarge)
+                                .foregroundStyle(Color.coral)
+                            }
+                            .buttonStyle(.plain)
+                        }
 
                         // Form fields
                         VStack(spacing: Spacing.md) {
@@ -149,7 +170,51 @@ struct AddFriendView: View {
             } message: {
                 Text("Please enter a name for your friend.")
             }
+            .sheet(isPresented: $showingContactPicker) {
+                ContactPicker { contact in
+                    importContact(contact)
+                }
+            }
         }
+    }
+
+    // MARK: - Contact Import
+
+    private func importContact(_ contact: CNContact) {
+        // Import name
+        let fullName = [contact.givenName, contact.familyName]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        if !fullName.isEmpty {
+            name = fullName
+        }
+
+        // Import phone (primary)
+        if let phone = contact.phoneNumbers.first?.value.stringValue {
+            phoneNumber = phone
+        }
+
+        // Import email (primary)
+        if let emailValue = contact.emailAddresses.first?.value as String? {
+            email = emailValue
+        }
+
+        // Import photo
+        if let imageData = contact.thumbnailImageData ?? contact.imageData {
+            selectedPhotoData = imageData
+            withAnimation(reduceMotion ? .none : .bounce) {
+                isAvatarBouncing = true
+            }
+            if !reduceMotion {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    withAnimation(.bounce) {
+                        isAvatarBouncing = false
+                    }
+                }
+            }
+        }
+
+        HapticService.shared.success()
     }
 
     // MARK: - Subviews
@@ -159,7 +224,8 @@ struct AddFriendView: View {
             ZStack {
                 // Avatar circle with photo or initials
                 if let photoData = selectedPhotoData,
-                   let uiImage = UIImage(data: photoData) {
+                    let uiImage = UIImage(data: photoData)
+                {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFill()
@@ -408,10 +474,13 @@ private struct FormField: View {
 
             // Validation indicator
             if !text.isEmpty && validation != .none {
-                Image(systemName: validationResult == .valid ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                    .foregroundStyle(validationResult == .valid ? Color.sage : Color.coral.opacity(0.7))
-                    .font(.body)
-                    .transition(.scale.combined(with: .opacity))
+                Image(
+                    systemName: validationResult == .valid
+                        ? "checkmark.circle.fill" : "exclamationmark.circle.fill"
+                )
+                .foregroundStyle(validationResult == .valid ? Color.sage : Color.coral.opacity(0.7))
+                .font(.body)
+                .transition(.scale.combined(with: .opacity))
             }
         }
         .padding(Spacing.sm)
@@ -475,7 +544,9 @@ private struct FormField: View {
                 if showCharacterCount && maxCharacters > 0 {
                     Text("\(text.count)/\(maxCharacters)")
                         .font(.labelSmall)
-                        .foregroundStyle(text.count > maxCharacters ? Color.coral : Color.textSecondary.opacity(0.5))
+                        .foregroundStyle(
+                            text.count > maxCharacters
+                                ? Color.coral : Color.textSecondary.opacity(0.5))
                 }
             }
             .animation(.snappy, value: validationResult)
@@ -526,7 +597,9 @@ private struct IntervalOption: View {
                         HStack(spacing: 3) {
                             ForEach(0..<dotCount, id: \.self) { _ in
                                 Circle()
-                                    .fill(isSelected ? Color.coral : Color.warmGrayDark.opacity(0.5))
+                                    .fill(
+                                        isSelected ? Color.coral : Color.warmGrayDark.opacity(0.5)
+                                    )
                                     .frame(width: 5, height: 5)
                             }
                         }
@@ -551,11 +624,13 @@ private struct IntervalOption: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(interval.label), \(isSelected ? "selected" : "not selected")")
-        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(reduceMotion ? .none : .spring(response: 0.2, dampingFraction: 0.6)) {
-                isPressed = pressing
-            }
-        }, perform: {})
+        .onLongPressGesture(
+            minimumDuration: .infinity,
+            pressing: { pressing in
+                withAnimation(reduceMotion ? .none : .spring(response: 0.2, dampingFraction: 0.6)) {
+                    isPressed = pressing
+                }
+            }, perform: {})
     }
 
     private var shortLabel: String {
@@ -573,6 +648,43 @@ private struct IntervalOption: View {
         case .biweekly: return 3
         case .monthly: return 2
         case .quarterly: return 1
+        }
+    }
+}
+
+// MARK: - Contact Picker
+
+struct ContactPicker: UIViewControllerRepresentable {
+    @Environment(\.dismiss) private var dismiss
+    var onSelectContact: (CNContact) -> Void
+
+    func makeUIViewController(context: Context) -> CNContactPickerViewController {
+        let picker = CNContactPickerViewController()
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: CNContactPickerViewController, context: Context)
+    {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, CNContactPickerDelegate {
+        let parent: ContactPicker
+
+        init(_ parent: ContactPicker) {
+            self.parent = parent
+        }
+
+        func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
+            parent.onSelectContact(contact)
+            parent.dismiss()
+        }
+
+        func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
+            parent.dismiss()
         }
     }
 }
