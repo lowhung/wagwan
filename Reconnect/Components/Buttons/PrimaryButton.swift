@@ -160,6 +160,48 @@ struct IconButton: View {
     }
 }
 
+// MARK: - Labeled Icon Button
+
+struct LabeledIconButton: View {
+    let icon: String
+    let label: String
+    let color: Color
+    var accessibilityLabel: String?
+    var action: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isPressed = false
+
+    var body: some View {
+        Button(action: {
+            HapticService.shared.buttonTap()
+            action()
+        }) {
+            VStack(spacing: Spacing.xs) {
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .semibold))
+                    .frame(width: 56, height: 56)
+                    .background(color.opacity(isPressed ? 0.25 : 0.15))
+                    .foregroundStyle(color)
+                    .clipShape(Circle())
+                    .scaleEffect(isPressed ? 0.9 : 1.0)
+
+                Text(label)
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textSecondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel ?? label)
+        .accessibilityAddTraits(.isButton)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            withAnimation(reduceMotion ? .none : .spring(response: 0.25, dampingFraction: 0.5)) {
+                isPressed = pressing
+            }
+        }, perform: {})
+    }
+}
+
 #Preview {
     VStack(spacing: Spacing.md) {
         PrimaryButton("Add Friend", icon: "plus") {}
@@ -170,6 +212,11 @@ struct IconButton: View {
             IconButton(icon: "phone.fill", color: .sage) {}
             IconButton(icon: "message.fill", color: .lavender) {}
             IconButton(icon: "envelope.fill", color: .sunflower) {}
+        }
+
+        HStack(spacing: Spacing.lg) {
+            LabeledIconButton(icon: "phone.fill", label: "Call", color: .sage) {}
+            LabeledIconButton(icon: "calendar.badge.plus", label: "Schedule", color: .lavender) {}
         }
     }
     .padding()

@@ -155,7 +155,12 @@ struct FriendDetailView: View {
     private var quickActions: some View {
         HStack(spacing: Spacing.md) {
             if friend.phoneNumber != nil || friend.email != nil {
-                IconButton(icon: "phone.fill", color: .sage, size: 56, accessibilityLabel: "Contact \(friend.name)") {
+                LabeledIconButton(
+                    icon: "phone.fill",
+                    label: "Call",
+                    color: .sage,
+                    accessibilityLabel: "Contact \(friend.name)"
+                ) {
                     showingCallOptions = true
                 }
             }
@@ -164,7 +169,12 @@ struct FriendDetailView: View {
                 showingLogContact = true
             }
 
-            IconButton(icon: "calendar.badge.plus", color: .lavender, size: 56, accessibilityLabel: "Add calendar reminder for \(friend.name)") {
+            LabeledIconButton(
+                icon: "calendar.badge.plus",
+                label: "Schedule",
+                color: .lavender,
+                accessibilityLabel: "Add calendar reminder for \(friend.name)"
+            ) {
                 createCalendarReminder()
             }
         }
