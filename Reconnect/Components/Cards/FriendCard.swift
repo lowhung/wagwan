@@ -42,6 +42,7 @@ struct FriendCard: View {
 
     var body: some View {
         Button(action: {
+            HapticService.shared.cardTap()
             onTap()
         }) {
             HStack(spacing: Spacing.md) {

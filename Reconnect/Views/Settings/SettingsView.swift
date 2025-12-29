@@ -90,6 +90,7 @@ struct SettingsView: View {
                     // Danger zone
                     settingsSection("Data") {
                         Button {
+                            HapticService.shared.warning()
                             showingResetConfirmation = true
                         } label: {
                             HStack {
@@ -241,6 +242,7 @@ private struct SettingsLinkRow: View {
 
     var body: some View {
         Button {
+            HapticService.shared.buttonTap()
             // TODO: Implement navigation
         } label: {
             HStack(spacing: Spacing.sm) {

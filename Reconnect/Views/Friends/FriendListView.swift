@@ -156,6 +156,7 @@ struct FriendListView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
+                        HapticService.shared.buttonTap()
                         showingAddFriend = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
@@ -331,7 +332,10 @@ private struct StatusSummaryCard: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.selection()
+            action()
+        }) {
             VStack(spacing: Spacing.xxs) {
                 ZStack {
                     if isOverdue && count > 0 {

@@ -27,6 +27,7 @@ struct PrimaryButton: View {
     var body: some View {
         Button(action: {
             if !isLoading {
+                HapticService.shared.buttonTap()
                 action()
             }
         }) {
@@ -86,7 +87,10 @@ struct SecondaryButton: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.buttonTap()
+            action()
+        }) {
             HStack(spacing: Spacing.xs) {
                 if let icon = icon {
                     Image(systemName: icon)
@@ -126,7 +130,10 @@ struct IconButton: View {
     @State private var isPressed = false
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.buttonTap()
+            action()
+        }) {
             Image(systemName: icon)
                 .font(.system(size: size * 0.4, weight: .semibold))
                 .frame(width: size, height: size)

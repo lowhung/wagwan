@@ -494,7 +494,10 @@ private struct IntervalOption: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.selection()
+            action()
+        }) {
             Text(shortLabel)
                 .font(.labelMedium)
                 .frame(maxWidth: .infinity)

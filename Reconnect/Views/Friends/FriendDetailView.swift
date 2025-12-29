@@ -267,6 +267,7 @@ struct FriendDetailView: View {
 
     private var deleteButton: some View {
         Button {
+            HapticService.shared.warning()
             showingDeleteConfirmation = true
         } label: {
             HStack {
@@ -318,7 +319,10 @@ private struct ContactInfoRow: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.buttonTap()
+            action()
+        }) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: icon)
                     .font(.bodyMedium)
@@ -522,7 +526,10 @@ private struct MethodButton: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticService.shared.selection()
+            action()
+        }) {
             VStack(spacing: Spacing.xxs) {
                 Image(systemName: method.icon)
                     .font(.title3)
