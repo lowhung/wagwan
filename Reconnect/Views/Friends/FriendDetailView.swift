@@ -208,20 +208,19 @@ struct FriendDetailView: View {
             HStack(spacing: Spacing.sm) {
                 StatCard(
                     value: friend.daysSinceLastContact.map { "\($0)" } ?? "—",
-                    label: "Days since contact",
+                    label: "Days since",
                     color: .coral
                 )
 
                 StatCard(
                     value: "\(friend.contactLogs.count)",
-                    label: "Total contacts",
+                    label: "Total",
                     color: .sage
                 )
 
-                StatCard(
-                    value: intervalLabel,
-                    label: "Reminder",
-                    color: .lavender
+                StreakCard(
+                    streak: friend.currentStreak,
+                    isActive: friend.isStreakActive
                 )
             }
         }
@@ -420,6 +419,57 @@ private struct StatCard: View {
     }
 }
 
+private struct StreakCard: View {
+    let streak: Int
+    let isActive: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isAnimating = false
+
+    var body: some View {
+        VStack(spacing: Spacing.xxs) {
+            HStack(spacing: 4) {
+                if streak > 0 && isActive {
+                    Text("🔥")
+                        .font(.system(size: 18))
+                        .scaleEffect(isAnimating ? 1.1 : 1.0)
+                        .onAppear {
+                            guard !reduceMotion else { return }
+                            withAnimation(
+                                .easeInOut(duration: 0.8)
+                                .repeatForever(autoreverses: true)
+                            ) {
+                                isAnimating = true
+                            }
+                        }
+                }
+                Text("\(streak)")
+                    .font(.displaySmall)
+                    .foregroundStyle(isActive && streak > 0 ? Color.sunflower : Color.textSecondary)
+            }
+
+            Text(streakLabel)
+                .font(.labelSmall)
+                .foregroundStyle(Color.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(Spacing.sm)
+        .background(Color.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+    }
+
+    private var streakLabel: String {
+        if streak == 0 {
+            return "Start streak!"
+        } else if !isActive {
+            return "Streak lost"
+        } else {
+            return "Streak"
+        }
+    }
+}
+
 private struct HistoryRow: View {
     let log: ContactLog
 
@@ -566,9 +616,20 @@ struct LogContactView: View {
         )
         log.friend = friend
         friend.contactLogs.append(log)
+
+        // Update streak before updating lastContactedAt
+        let milestone = friend.updateStreak(contactDate: contactDate)
+
         friend.lastContactedAt = contactDate
 
         HapticService.shared.success()
+
+        // Show extra celebration for milestones
+        if let milestone = milestone {
+            // Could show a special message here
+            print("Milestone reached: \(milestone.emoji) \(milestone.message)")
+        }
+
         showConfetti = true
     }
 }
