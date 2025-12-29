@@ -197,9 +197,11 @@ struct FriendListView: View {
             }
             .sheet(isPresented: $showingAddFriend) {
                 AddFriendView()
+                    .styledSheet()
             }
             .sheet(item: $selectedFriend) { friend in
                 FriendDetailView(friend: friend)
+                    .styledSheet()
             }
             .overlay(alignment: .top) {
                 if showingRefreshMessage {

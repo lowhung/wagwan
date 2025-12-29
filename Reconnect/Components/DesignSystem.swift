@@ -213,6 +213,23 @@ extension View {
     func pillStyle(color: Color) -> some View {
         modifier(PillStyle(color: color))
     }
+
+    /// Apply custom sheet styling for a polished, on-brand presentation
+    func styledSheet() -> some View {
+        self
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
+            .presentationCornerRadius(24)
+    }
+
+    /// Apply custom sheet styling with specific detents
+    func styledSheet(detents: Set<PresentationDetent>) -> some View {
+        self
+            .presentationDetents(detents)
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
+            .presentationCornerRadius(24)
+    }
 }
 
 // MARK: - Adaptive Gradients

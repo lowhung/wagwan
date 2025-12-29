@@ -132,6 +132,7 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingHelpSheet) {
             HelpView()
+                .styledSheet()
         }
     }
 

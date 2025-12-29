@@ -73,9 +73,11 @@ struct FriendDetailView: View {
             }
             .sheet(isPresented: $showingEditSheet) {
                 AddFriendView(friend: friend)
+                    .styledSheet()
             }
             .sheet(isPresented: $showingLogContact) {
                 LogContactView(friend: friend)
+                    .styledSheet(detents: [.medium, .large])
             }
             .confirmationDialog("Contact \(friend.name)", isPresented: $showingCallOptions) {
                 if let phone = friend.phoneNumber, let url = URL(string: "tel:\(phone)") {
