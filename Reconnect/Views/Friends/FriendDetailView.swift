@@ -12,6 +12,9 @@ struct FriendDetailView: View {
     @State private var showingLogContact = false
     @State private var showingDeleteConfirmation = false
     @State private var showingCallOptions = false
+    @State private var showingUndoToast = false
+    @State private var pendingDeletion = false
+    @State private var undoTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -92,13 +95,23 @@ struct FriendDetailView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }
-            .alert("Delete Friend?", isPresented: $showingDeleteConfirmation) {
-                Button("Delete", role: .destructive) {
-                    deleteFriend()
+            .alert("Remove \(friend.name)?", isPresented: $showingDeleteConfirmation) {
+                Button("Remove", role: .destructive) {
+                    startDeletion()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This will permanently remove \(friend.name) and all contact history.")
+                Text("You'll have 5 seconds to undo this action.")
+            }
+            .overlay(alignment: .bottom) {
+                if showingUndoToast {
+                    UndoToast(
+                        friendName: friend.name,
+                        onUndo: cancelDeletion
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .padding(.bottom, Spacing.xl)
+                }
             }
         }
     }
@@ -270,18 +283,24 @@ struct FriendDetailView: View {
             HapticService.shared.warning()
             showingDeleteConfirmation = true
         } label: {
-            HStack {
-                Image(systemName: "trash.fill")
-                Text("Delete Friend")
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "person.badge.minus")
+                Text("Remove from list")
             }
-            .font(.headlineSmall)
-            .foregroundStyle(.red)
+            .font(.bodyMedium)
+            .foregroundStyle(Color.rose)
             .frame(maxWidth: .infinity)
             .padding(Spacing.md)
-            .background(Color.red.opacity(0.1))
+            .background(Color.rose.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .stroke(Color.rose.opacity(0.2), lineWidth: 1)
+            )
         }
         .padding(.top, Spacing.lg)
+        .opacity(pendingDeletion ? 0.5 : 1.0)
+        .disabled(pendingDeletion)
     }
 
     // MARK: - Helpers
@@ -296,9 +315,43 @@ struct FriendDetailView: View {
         }
     }
 
-    private func deleteFriend() {
-        modelContext.delete(friend)
+    private func startDeletion() {
+        pendingDeletion = true
         HapticService.shared.impact(.medium)
+
+        withAnimation(reduceMotion ? .none : .spring(response: 0.4, dampingFraction: 0.8)) {
+            showingUndoToast = true
+        }
+
+        // Schedule actual deletion after 5 seconds
+        undoTask = Task {
+            try? await Task.sleep(for: .seconds(5))
+            if !Task.isCancelled {
+                await MainActor.run {
+                    completeDeletion()
+                }
+            }
+        }
+    }
+
+    private func cancelDeletion() {
+        undoTask?.cancel()
+        undoTask = nil
+        pendingDeletion = false
+
+        withAnimation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.8)) {
+            showingUndoToast = false
+        }
+
+        HapticService.shared.success()
+    }
+
+    private func completeDeletion() {
+        withAnimation(reduceMotion ? .none : .easeOut(duration: 0.2)) {
+            showingUndoToast = false
+        }
+
+        modelContext.delete(friend)
         dismiss()
     }
 
@@ -544,6 +597,56 @@ private struct MethodButton: View {
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Undo Toast
+
+private struct UndoToast: View {
+    let friendName: String
+    let onUndo: () -> Void
+
+    @State private var progress: CGFloat = 1.0
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            Text("\(friendName) removed")
+                .font(.bodyMedium)
+                .foregroundStyle(Color.textPrimary)
+
+            Spacer()
+
+            Button(action: onUndo) {
+                Text("Undo")
+                    .font(.headlineSmall)
+                    .foregroundStyle(Color.coral)
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            ZStack(alignment: .bottom) {
+                Color.cardBackground
+
+                // Progress bar at bottom
+                GeometryReader { geo in
+                    Rectangle()
+                        .fill(Color.coral.opacity(0.3))
+                        .frame(width: geo.size.width * progress, height: 3)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
+                }
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+        .padding(.horizontal, Spacing.md)
+        .onAppear {
+            withAnimation(.linear(duration: 5)) {
+                progress = 0
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(friendName) removed. Undo button available for 5 seconds.")
+        .accessibilityAddTraits(.isButton)
     }
 }
 

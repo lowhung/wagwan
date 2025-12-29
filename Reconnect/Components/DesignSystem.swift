@@ -26,6 +26,9 @@ extension Color {
     static let sunflowerLight = Color(red: 0.976, green: 0.902, blue: 0.706)
     static let sunflowerDark = Color(red: 0.863, green: 0.733, blue: 0.420)
 
+    // mutedRose #C98B8B (soft rose for delete/remove actions)
+    static let rose = Color(red: 0.788, green: 0.545, blue: 0.545)
+
     // MARK: - Adaptive Semantic Colors
 
     /// Primary background - warm cream in light, warm dark in dark mode
