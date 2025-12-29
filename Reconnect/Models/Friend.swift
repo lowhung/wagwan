@@ -225,4 +225,17 @@ enum ReminderInterval: Int, CaseIterable, Identifiable {
         case .quarterly: return "Quarterly"
         }
     }
+
+    var description: String {
+        switch self {
+        case .weekly:
+            return "Perfect for close friends you talk to often"
+        case .biweekly:
+            return "Great for staying close without overwhelming"
+        case .monthly:
+            return "Ideal for friends you catch up with regularly"
+        case .quarterly:
+            return "Good for keeping in touch with distant friends"
+        }
+    }
 }

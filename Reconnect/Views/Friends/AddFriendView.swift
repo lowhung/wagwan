@@ -236,8 +236,8 @@ struct AddFriendView: View {
     }
 
     private var intervalPicker: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Label("Reminder Frequency", systemImage: "bell.fill")
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Label("How often do you want to reconnect?", systemImage: "bell.fill")
                 .font(.labelLarge)
                 .foregroundStyle(Color.textSecondary)
 
@@ -253,6 +253,14 @@ struct AddFriendView: View {
                     }
                 }
             }
+
+            // Descriptive text for selected interval
+            Text(selectedInterval.description)
+                .font(.labelSmall)
+                .foregroundStyle(Color.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, Spacing.xxs)
+                .animation(.snappy, value: selectedInterval)
         }
         .padding(Spacing.md)
         .background(Color.cardBackground)
@@ -493,28 +501,78 @@ private struct IntervalOption: View {
     let isSelected: Bool
     var action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isPressed = false
+
     var body: some View {
         Button(action: {
             HapticService.shared.selection()
             action()
         }) {
-            Text(shortLabel)
-                .font(.labelMedium)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.sm)
-                .background(isSelected ? Color.coral : Color.cardBackground)
-                .foregroundStyle(isSelected ? .white : Color.textSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+            VStack(spacing: Spacing.xxs) {
+                // Visual calendar with dots
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isSelected ? Color.coral.opacity(0.15) : Color.appBackground)
+                        .frame(width: 36, height: 32)
+
+                    VStack(spacing: 3) {
+                        // Calendar header bar
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(isSelected ? Color.coral : Color.warmGrayDark.opacity(0.4))
+                            .frame(width: 28, height: 4)
+
+                        // Dots representing frequency
+                        HStack(spacing: 3) {
+                            ForEach(0..<dotCount, id: \.self) { _ in
+                                Circle()
+                                    .fill(isSelected ? Color.coral : Color.warmGrayDark.opacity(0.5))
+                                    .frame(width: 5, height: 5)
+                            }
+                        }
+                    }
+                }
+
+                Text(shortLabel)
+                    .font(.labelSmall)
+                    .foregroundStyle(isSelected ? Color.coral : Color.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: CornerRadius.small)
+                    .fill(isSelected ? Color.coral.opacity(0.1) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.small)
+                    .stroke(isSelected ? Color.coral : Color.clear, lineWidth: 2)
+            )
+            .scaleEffect(isPressed ? 0.95 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(interval.label), \(isSelected ? "selected" : "not selected")")
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            withAnimation(reduceMotion ? .none : .spring(response: 0.2, dampingFraction: 0.6)) {
+                isPressed = pressing
+            }
+        }, perform: {})
     }
 
     private var shortLabel: String {
         switch interval {
-        case .weekly: return "1 wk"
-        case .biweekly: return "2 wk"
-        case .monthly: return "1 mo"
-        case .quarterly: return "3 mo"
+        case .weekly: return "Weekly"
+        case .biweekly: return "2 weeks"
+        case .monthly: return "Monthly"
+        case .quarterly: return "Quarterly"
+        }
+    }
+
+    private var dotCount: Int {
+        switch interval {
+        case .weekly: return 4
+        case .biweekly: return 3
+        case .monthly: return 2
+        case .quarterly: return 1
         }
     }
 }
