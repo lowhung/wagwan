@@ -53,6 +53,28 @@ struct FriendListView: View {
         return (overdue, dueSoon, onTrack)
     }
 
+    // Helper to determine if empty is due to search vs filter
+    private var isEmptyDueToSearch: Bool {
+        !searchText.isEmpty && filteredFriends.isEmpty
+    }
+
+    private var isEmptyDueToFilter: Bool {
+        searchText.isEmpty && selectedFilter != .all && filteredFriends.isEmpty
+    }
+
+    private var emptyFilterMessage: String {
+        switch selectedFilter {
+        case .overdue:
+            return "No overdue friends – you're on top of things!"
+        case .dueSoon:
+            return "No friends due soon – nice!"
+        case .onTrack:
+            return "No on track friends right now"
+        case .all:
+            return ""
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -62,7 +84,7 @@ struct FriendListView: View {
                     EmptyFriendsView {
                         showingAddFriend = true
                     }
-                } else if filteredFriends.isEmpty {
+                } else if isEmptyDueToSearch {
                     NoSearchResultsView(searchText: searchText)
                 } else {
                     ScrollView {
@@ -76,11 +98,22 @@ struct FriendListView: View {
                             // Filter pills
                             filterPills
 
-                            // Friend list
-                            LazyVStack(spacing: Spacing.sm) {
-                                ForEach(filteredFriends) { friend in
-                                    FriendCard(friend: friend) {
-                                        selectedFriend = friend
+                            // Friend list or empty filter message
+                            if isEmptyDueToFilter {
+                                EmptyFilterView(
+                                    message: emptyFilterMessage,
+                                    filterOption: selectedFilter
+                                ) {
+                                    withAnimation(.snappy) {
+                                        selectedFilter = .all
+                                    }
+                                }
+                            } else {
+                                LazyVStack(spacing: Spacing.sm) {
+                                    ForEach(filteredFriends) { friend in
+                                        FriendCard(friend: friend) {
+                                            selectedFriend = friend
+                                        }
                                     }
                                 }
                             }
@@ -352,6 +385,82 @@ private struct FilterPill: View {
                 .softShadow()
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Empty Filter View
+
+private struct EmptyFilterView: View {
+    let message: String
+    let filterOption: FriendListView.FilterOption
+    let onClearFilter: () -> Void
+
+    @State private var isAnimating = false
+
+    private var iconName: String {
+        switch filterOption {
+        case .overdue:
+            return "checkmark.seal.fill"
+        case .dueSoon:
+            return "clock.badge.checkmark.fill"
+        case .onTrack:
+            return "person.crop.circle.badge.questionmark.fill"
+        case .all:
+            return "sparkles"
+        }
+    }
+
+    private var iconColor: Color {
+        switch filterOption {
+        case .overdue:
+            return .statusOnTrack
+        case .dueSoon:
+            return .statusOnTrack
+        case .onTrack:
+            return .warmGrayDark
+        case .all:
+            return .coral
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(iconColor.opacity(0.15))
+                    .frame(width: 80, height: 80)
+                    .scaleEffect(isAnimating ? 1.05 : 1.0)
+
+                Image(systemName: iconName)
+                    .font(.system(size: 32))
+                    .foregroundStyle(iconColor)
+                    .scaleEffect(isAnimating ? 1.1 : 1.0)
+            }
+
+            Text(message)
+                .font(.bodyMedium)
+                .foregroundStyle(Color.warmGrayDark)
+                .multilineTextAlignment(.center)
+
+            Button {
+                onClearFilter()
+            } label: {
+                Text("Show all friends")
+                    .font(.labelMedium)
+                    .foregroundStyle(Color.coral)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, Spacing.xl)
+        .frame(maxWidth: .infinity)
+        .onAppear {
+            withAnimation(
+                .easeInOut(duration: 1.5)
+                    .repeatForever(autoreverses: true)
+            ) {
+                isAnimating = true
+            }
+        }
     }
 }
 
