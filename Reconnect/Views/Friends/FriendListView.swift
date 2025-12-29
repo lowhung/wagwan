@@ -138,7 +138,7 @@ struct FriendListView: View {
                                 }
                             } else {
                                 LazyVStack(spacing: Spacing.sm) {
-                                    ForEach(filteredFriends) { friend in
+                                    ForEach(Array(filteredFriends.enumerated()), id: \.element.id) { index, friend in
                                         FriendCard(
                                             friend: friend,
                                             onTap: {
@@ -154,8 +154,15 @@ struct FriendListView: View {
                                                 messageFriend(friend)
                                             } : nil
                                         )
+                                        .transition(
+                                            .asymmetric(
+                                                insertion: .scale(scale: 0.9).combined(with: .opacity),
+                                                removal: .scale(scale: 0.9).combined(with: .opacity)
+                                            )
+                                        )
                                     }
                                 }
+                                .animation(reduceMotion ? .none : .spring(response: 0.4, dampingFraction: 0.8), value: filteredFriends.map(\.id))
                             }
                         }
                         .padding(.horizontal, Spacing.md)
