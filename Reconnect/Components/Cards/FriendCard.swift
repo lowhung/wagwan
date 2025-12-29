@@ -110,7 +110,7 @@ struct FriendCard: View {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(friend.name)
                         .font(.headlineMedium)
-                        .foregroundStyle(Color.warmBlack)
+                        .foregroundStyle(Color.textPrimary)
 
                     lastContactText
                 }
@@ -127,9 +127,9 @@ struct FriendCard: View {
                 }
             }
             .padding(Spacing.md)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
-            .cardShadow()
+            .adaptiveShadow()
             .scaleEffect(isPressed ? 0.98 : 1.0)
         }
         .buttonStyle(.plain)
@@ -298,11 +298,11 @@ struct FriendCard: View {
             if let days = friend.daysSinceLastContact {
                 Text(daysAgoText(days))
                     .font(.bodySmall)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
             } else {
                 Text("Never contacted")
                     .font(.bodySmall)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
             }
         }
     }

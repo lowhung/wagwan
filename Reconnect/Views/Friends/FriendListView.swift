@@ -105,7 +105,7 @@ struct FriendListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient.warmBackground.ignoresSafeArea()
+                AdaptiveBackground()
 
                 if friends.isEmpty {
                     EmptyFriendsView {
@@ -334,14 +334,14 @@ private struct WelcomeHeader: View {
             HStack(spacing: Spacing.xs) {
                 Text(greeting.text)
                     .font(.displaySmall)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
                 Text(greeting.emoji)
                     .font(.system(size: 22))
             }
 
             Text(encouragingMessage)
                 .font(.bodyMedium)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, Spacing.xs)
@@ -395,11 +395,11 @@ private struct StatusSummaryCard: View {
 
                 Text(label)
                     .font(.labelSmall)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
-            .background(isSelected ? color.opacity(0.15) : Color.white)
+            .background(isSelected ? color.opacity(0.15) : Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.medium)
@@ -466,11 +466,11 @@ private struct FilterPill: View {
     @State private var isPressed = false
 
     private var displayColor: Color {
-        isSelected ? color : Color.warmGrayDark
+        isSelected ? color : Color.textSecondary
     }
 
     private var backgroundColor: Color {
-        isSelected ? color.opacity(0.15) : Color.white
+        isSelected ? color.opacity(0.15) : Color.cardBackground
     }
 
     private var borderColor: Color {
@@ -579,7 +579,7 @@ private struct EmptyFilterView: View {
 
             Text(message)
                 .font(.bodyMedium)
-                .foregroundStyle(Color.warmGrayDark)
+                .foregroundStyle(Color.textSecondary)
                 .multilineTextAlignment(.center)
 
             Button {
@@ -671,12 +671,12 @@ private struct EmptyFriendsView: View {
             VStack(spacing: Spacing.sm) {
                 Text("Your friend list is waiting to bloom")
                     .font(.displaySmall)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
                     .multilineTextAlignment(.center)
 
                 Text("Add someone special to stay connected with")
                     .font(.bodyMedium)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, Spacing.lg)
@@ -763,22 +763,22 @@ private struct NoSearchResultsView: View {
             VStack(spacing: Spacing.sm) {
                 Text("No friends found")
                     .font(.displaySmall)
-                    .foregroundStyle(Color.warmBlack)
+                    .foregroundStyle(Color.textPrimary)
 
                 if searchText.isEmpty {
                     Text("Try adjusting your filters")
                         .font(.bodyMedium)
-                        .foregroundStyle(Color.warmGrayDark)
+                        .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
                 } else {
                     Text("No one matches \"\(searchText)\"")
                         .font(.bodyMedium)
-                        .foregroundStyle(Color.warmGrayDark)
+                        .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
 
                     Text("Try a different search term")
                         .font(.bodySmall)
-                        .foregroundStyle(Color.warmGrayDark.opacity(0.8))
+                        .foregroundStyle(Color.textSecondary.opacity(0.8))
                 }
             }
             .padding(.horizontal, Spacing.lg)

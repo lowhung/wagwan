@@ -34,7 +34,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            Color.warmGray.ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Page content
@@ -70,7 +70,7 @@ struct OnboardingView: View {
                                 completeOnboarding()
                             }
                             .font(.headlineSmall)
-                            .foregroundStyle(Color.warmGrayDark)
+                            .foregroundStyle(Color.textSecondary)
                             .frame(maxWidth: .infinity)
 
                             PrimaryButton("Next", icon: "arrow.right") {
@@ -112,7 +112,7 @@ struct OnboardingView: View {
 
                 Text(page.subtitle)
                     .font(.bodyLarge)
-                    .foregroundStyle(Color.warmGrayDark)
+                    .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
             }
