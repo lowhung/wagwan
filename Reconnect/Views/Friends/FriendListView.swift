@@ -67,6 +67,9 @@ struct FriendListView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: Spacing.md) {
+                            // Welcome greeting
+                            WelcomeHeader(statusCounts: statusCounts)
+
                             // Status summary
                             statusSummary
 
@@ -177,6 +180,60 @@ struct FriendListView: View {
 }
 
 // MARK: - Supporting Views
+
+private struct WelcomeHeader: View {
+    let statusCounts: (overdue: Int, dueSoon: Int, onTrack: Int)
+
+    private var greeting: (text: String, emoji: String) {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:
+            return ("Good morning", "☀️")
+        case 12..<17:
+            return ("Good afternoon", "🌤")
+        case 17..<21:
+            return ("Good evening", "🌙")
+        default:
+            return ("Good night", "✨")
+        }
+    }
+
+    private var encouragingMessage: String {
+        let total = statusCounts.overdue + statusCounts.dueSoon + statusCounts.onTrack
+
+        if total == 0 {
+            return "Ready to add some friends?"
+        } else if statusCounts.overdue == 0 && statusCounts.dueSoon == 0 {
+            return "Everyone's feeling the love!"
+        } else if statusCounts.overdue == 0 {
+            return "You're staying connected nicely"
+        } else if statusCounts.overdue == 1 {
+            return "A friend misses you – say hi?"
+        } else if statusCounts.overdue <= 3 {
+            return "A few friends miss you – why not say hi?"
+        } else {
+            return "Let's reconnect with some friends today"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+            HStack(spacing: Spacing.xs) {
+                Text(greeting.text)
+                    .font(.displaySmall)
+                    .foregroundStyle(Color.warmBlack)
+                Text(greeting.emoji)
+                    .font(.system(size: 22))
+            }
+
+            Text(encouragingMessage)
+                .font(.bodyMedium)
+                .foregroundStyle(Color.warmGrayDark)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, Spacing.xs)
+    }
+}
 
 private struct StatusSummaryCard: View {
     let count: Int
