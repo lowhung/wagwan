@@ -253,7 +253,11 @@ struct FriendDetailView: View {
     }
 
     private var historySection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
+        let sortedLogs = friend.contactLogs.sorted { $0.contactedAt > $1.contactedAt }
+        let displayedLogs = Array(sortedLogs.prefix(5))
+        let totalCount = friend.contactLogs.count
+
+        return VStack(alignment: .leading, spacing: Spacing.sm) {
             Text("Recent Activity")
                 .font(.headlineSmall)
                 .foregroundStyle(Color.textSecondary)
@@ -268,19 +272,31 @@ struct FriendDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
             } else {
                 VStack(spacing: 0) {
-                    ForEach(friend.contactLogs.sorted { $0.contactedAt > $1.contactedAt }.prefix(5))
-                    { log in
-                        HistoryRow(log: log)
+                    ForEach(Array(displayedLogs.enumerated()), id: \.element.id) { index, log in
+                        TimelineRow(
+                            log: log,
+                            isFirst: index == 0,
+                            isLast: index == displayedLogs.count - 1
+                        )
+                    }
 
-                        if log.id
-                            != friend.contactLogs.sorted(by: { $0.contactedAt > $1.contactedAt })
-                            .prefix(5).last?.id
-                        {
-                            Divider()
-                                .padding(.horizontal, Spacing.md)
+                    // "View all" link if there are more
+                    if totalCount > 5 {
+                        HStack {
+                            Spacer()
+                            Text("View all \(totalCount) interactions")
+                                .font(.labelMedium)
+                                .foregroundStyle(Color.coral)
+                            Image(systemName: "arrow.right")
+                                .font(.labelSmall)
+                                .foregroundStyle(Color.coral)
+                            Spacer()
                         }
+                        .padding(.vertical, Spacing.sm)
+                        .padding(.leading, 44) // Align with content
                     }
                 }
+                .padding(.vertical, Spacing.xs)
                 .background(Color.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
             }
@@ -480,31 +496,109 @@ private struct StreakCard: View {
     }
 }
 
-private struct HistoryRow: View {
+private struct TimelineRow: View {
     let log: ContactLog
+    let isFirst: Bool
+    let isLast: Bool
+
+    @State private var isExpanded = false
+
+    private var methodColor: Color {
+        switch log.method {
+        case .call: return .sage
+        case .text: return .lavender
+        case .inPerson: return .coral
+        case .video: return .sunflower
+        case .email: return .lavenderDark
+        case .social: return .coralLight
+        case .other: return .warmGrayDark
+        }
+    }
+
+    private var relativeDate: String {
+        let calendar = Calendar.current
+        let now = Date()
+        let days = calendar.dateComponents([.day], from: log.contactedAt, to: now).day ?? 0
+
+        switch days {
+        case 0: return "Today"
+        case 1: return "Yesterday"
+        case 2...6: return "\(days) days ago"
+        case 7...13: return "1 week ago"
+        case 14...20: return "2 weeks ago"
+        case 21...27: return "3 weeks ago"
+        case 28...59: return "1 month ago"
+        case 60...89: return "2 months ago"
+        default: return log.contactedAt.formatted(date: .abbreviated, time: .omitted)
+        }
+    }
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: log.method.icon)
-                .font(.bodyMedium)
-                .foregroundStyle(Color.coral)
-                .frame(width: 32, height: 32)
-                .background(Color.coral.opacity(0.1))
-                .clipShape(Circle())
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            // Timeline with dot and line
+            VStack(spacing: 0) {
+                // Top line (hidden for first item)
+                Rectangle()
+                    .fill(isFirst ? Color.clear : Color.warmGrayDark.opacity(0.3))
+                    .frame(width: 2, height: 12)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(log.method.label)
-                    .font(.bodyMedium)
-                    .foregroundStyle(Color.textPrimary)
+                // Dot
+                Circle()
+                    .fill(methodColor)
+                    .frame(width: 12, height: 12)
+                    .overlay(
+                        Circle()
+                            .fill(isFirst ? methodColor : Color.clear)
+                            .frame(width: 6, height: 6)
+                    )
 
-                Text(log.contactedAt.formatted(date: .abbreviated, time: .omitted))
-                    .font(.labelSmall)
-                    .foregroundStyle(Color.textSecondary)
+                // Bottom line (hidden for last item)
+                Rectangle()
+                    .fill(isLast ? Color.clear : Color.warmGrayDark.opacity(0.3))
+                    .frame(width: 2)
+                    .frame(maxHeight: .infinity)
             }
+            .frame(width: 20)
+            .padding(.leading, Spacing.sm)
 
-            Spacer()
+            // Content
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: log.method.icon)
+                        .font(.system(size: 14))
+                        .foregroundStyle(methodColor)
+
+                    Text(log.method.label)
+                        .font(.bodyMedium)
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text("•")
+                        .foregroundStyle(Color.textSecondary)
+
+                    Text(relativeDate)
+                        .font(.labelSmall)
+                        .foregroundStyle(Color.textSecondary)
+                }
+
+                // Notes preview with expansion
+                if let notes = log.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.bodySmall)
+                        .foregroundStyle(Color.textSecondary)
+                        .lineLimit(isExpanded ? nil : 2)
+                        .onTapGesture {
+                            withAnimation(.snappy) {
+                                isExpanded.toggle()
+                            }
+                        }
+                }
+            }
+            .padding(.vertical, Spacing.sm)
+            .padding(.trailing, Spacing.md)
+
+            Spacer(minLength: 0)
         }
-        .padding(Spacing.md)
+        .frame(minHeight: 52)
     }
 }
 
