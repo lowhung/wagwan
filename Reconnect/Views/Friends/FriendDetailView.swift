@@ -518,75 +518,78 @@ struct LogContactView: View {
             ZStack {
                 Color.appBackground.ignoresSafeArea()
 
-                VStack(spacing: Spacing.lg) {
-                    // Method picker
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("How did you connect?")
-                            .font(.headlineSmall)
-                            .foregroundStyle(Color.textSecondary)
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        // Method picker
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("How did you connect?")
+                                .font(.headlineSmall)
+                                .foregroundStyle(Color.textSecondary)
 
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: Spacing.xs)
-                        {
-                            ForEach(ContactMethod.allCases) { method in
-                                MethodButton(
-                                    method: method,
-                                    isSelected: selectedMethod == method
-                                ) {
-                                    withAnimation(reduceMotion ? .none : .bounce) {
-                                        selectedMethod = method
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: Spacing.xs)
+                            {
+                                ForEach(ContactMethod.allCases) { method in
+                                    MethodButton(
+                                        method: method,
+                                        isSelected: selectedMethod == method
+                                    ) {
+                                        withAnimation(reduceMotion ? .none : .bounce) {
+                                            selectedMethod = method
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // Date picker
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("When?")
-                            .font(.headlineSmall)
-                            .foregroundStyle(Color.textSecondary)
+                        // Date picker
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("When?")
+                                .font(.headlineSmall)
+                                .foregroundStyle(Color.textSecondary)
 
-                        DatePicker(
-                            "",
-                            selection: $contactDate,
-                            in: ...Date(),
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .tint(.coral)
-                        .padding(Spacing.sm)
-                        .background(Color.cardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-                    }
-
-                    // Notes
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("Notes (optional)")
-                            .font(.headlineSmall)
-                            .foregroundStyle(Color.textSecondary)
-
-                        TextField("What did you talk about?", text: $notes, axis: .vertical)
-                            .font(.bodyMedium)
-                            .lineLimit(2...4)
+                            DatePicker(
+                                "",
+                                selection: $contactDate,
+                                in: ...Date(),
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.graphical)
+                            .tint(.coral)
                             .padding(Spacing.sm)
                             .background(Color.cardBackground)
                             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: CornerRadius.medium)
-                                    .stroke(isNotesFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
-                            )
-                            .focused($isNotesFocused)
-                            .submitLabel(.done)
-                            .onSubmit { isNotesFocused = false }
-                    }
+                        }
 
-                    Spacer()
+                        // Notes
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("Notes (optional)")
+                                .font(.headlineSmall)
+                                .foregroundStyle(Color.textSecondary)
 
-                    PrimaryButton("Log Contact", icon: "checkmark.circle.fill") {
-                        logContact()
+                            TextField("What did you talk about?", text: $notes, axis: .vertical)
+                                .font(.bodyMedium)
+                                .lineLimit(2...4)
+                                .padding(Spacing.sm)
+                                .background(Color.cardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: CornerRadius.medium)
+                                        .stroke(isNotesFocused ? Color.coral.opacity(0.5) : Color.clear, lineWidth: 2)
+                                )
+                                .focused($isNotesFocused)
+                                .submitLabel(.done)
+                                .onSubmit { isNotesFocused = false }
+                        }
+
+                        // Submit button
+                        PrimaryButton("Log Contact", icon: "checkmark.circle.fill") {
+                            logContact()
+                        }
+                        .padding(.top, Spacing.md)
                     }
+                    .padding(Spacing.md)
+                    .padding(.bottom, Spacing.lg)
                 }
-                .padding(Spacing.md)
                 .onTapGesture {
                     isNotesFocused = false
                 }

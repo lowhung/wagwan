@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import StoreKit
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -12,6 +13,9 @@ struct SettingsView: View {
     @State private var showingResetConfirmation = false
     @State private var showingExportSheet = false
     @State private var calendarAccessGranted = false
+    @State private var showingHelpSheet = false
+
+    @Environment(\.requestReview) private var requestReview
 
     var body: some View {
         ZStack {
@@ -61,19 +65,25 @@ struct SettingsView: View {
                             icon: "questionmark.circle.fill",
                             iconColor: .sage,
                             title: "Help & FAQ"
-                        )
+                        ) {
+                            showingHelpSheet = true
+                        }
 
                         SettingsLinkRow(
                             icon: "star.fill",
                             iconColor: .sunflower,
                             title: "Rate Reconnect"
-                        )
+                        ) {
+                            requestAppReview()
+                        }
 
                         SettingsLinkRow(
                             icon: "envelope.fill",
                             iconColor: .lavender,
                             title: "Send Feedback"
-                        )
+                        ) {
+                            openFeedbackEmail()
+                        }
 
                         SettingsRow(
                             icon: "info.circle.fill",
@@ -81,7 +91,7 @@ struct SettingsView: View {
                             title: "Version",
                             subtitle: ""
                         ) {
-                            Text("1.0.0")
+                            Text(appVersion)
                                 .font(.bodyMedium)
                                 .foregroundStyle(Color.textSecondary)
                         }
@@ -119,6 +129,9 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will show the onboarding screens again the next time you open the app.")
+        }
+        .sheet(isPresented: $showingHelpSheet) {
+            HelpView()
         }
     }
 
@@ -183,6 +196,14 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Computed Properties
+
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
+    }
+
     // MARK: - Actions
 
     private func checkCalendarAccess() {
@@ -195,6 +216,23 @@ struct SettingsView: View {
             if calendarAccessGranted {
                 HapticService.shared.success()
             }
+        }
+    }
+
+    private func requestAppReview() {
+        requestReview()
+    }
+
+    private func openFeedbackEmail() {
+        let email = "feedback@reconnect.app"
+        let subject = "Reconnect Feedback"
+        let body = "\n\n---\nApp Version: \(appVersion)\niOS: \(UIDevice.current.systemVersion)\nDevice: \(UIDevice.current.model)"
+
+        let subjectEncoded = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let bodyEncoded = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+
+        if let url = URL(string: "mailto:\(email)?subject=\(subjectEncoded)&body=\(bodyEncoded)") {
+            UIApplication.shared.open(url)
         }
     }
 }
@@ -239,11 +277,12 @@ private struct SettingsLinkRow: View {
     let icon: String
     let iconColor: Color
     let title: String
+    let action: () -> Void
 
     var body: some View {
         Button {
             HapticService.shared.buttonTap()
-            // TODO: Implement navigation
+            action()
         } label: {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: icon)
@@ -283,6 +322,123 @@ private struct StatRow: View {
                 .foregroundStyle(Color.coral)
         }
         .padding(Spacing.md)
+    }
+}
+
+// MARK: - Help View
+
+private struct HelpView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.appBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.lg) {
+                        // Header
+                        VStack(spacing: Spacing.sm) {
+                            Image(systemName: "questionmark.circle.fill")
+                                .font(.system(size: 48))
+                                .foregroundStyle(Color.sage)
+
+                            Text("Help & FAQ")
+                                .font(.displaySmall)
+                                .foregroundStyle(Color.textPrimary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, Spacing.md)
+
+                        // FAQ Items
+                        FAQItem(
+                            question: "How do I add a friend?",
+                            answer: "Tap the + button in the top right corner of the main screen. Fill in their name and contact details, then choose how often you'd like to be reminded to reach out."
+                        )
+
+                        FAQItem(
+                            question: "What do the status colors mean?",
+                            answer: "Green (On Track) means you're within your reminder window. Yellow (Due Soon) means it's almost time to reach out. Red (Overdue) means you've passed your reminder date."
+                        )
+
+                        FAQItem(
+                            question: "How do streaks work?",
+                            answer: "Your streak increases each time you log a contact within your reminder interval. If you miss a check-in window, your streak resets. Keep the streak alive to build consistent habits!"
+                        )
+
+                        FAQItem(
+                            question: "Can I add calendar reminders?",
+                            answer: "Yes! Tap on a friend, then tap the calendar icon. This will create an event in your calendar with a reminder. Make sure to grant calendar access in Settings."
+                        )
+
+                        FAQItem(
+                            question: "How do I log a contact?",
+                            answer: "Open a friend's profile and tap 'Log Contact'. Choose how you connected (call, text, in person, etc.), select the date, and optionally add notes about your conversation."
+                        )
+
+                        FAQItem(
+                            question: "Can I edit or delete a friend?",
+                            answer: "Yes! Tap on a friend to open their profile, then tap 'Edit' in the top right to modify their details. To remove them, scroll to the bottom and tap 'Remove from list'."
+                        )
+                    }
+                    .padding(Spacing.md)
+                    .padding(.bottom, Spacing.xxl)
+                }
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundStyle(Color.coral)
+                }
+            }
+        }
+    }
+}
+
+private struct FAQItem: View {
+    let question: String
+    let answer: String
+
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    isExpanded.toggle()
+                }
+                HapticService.shared.selection()
+            } label: {
+                HStack {
+                    Text(question)
+                        .font(.headlineSmall)
+                        .foregroundStyle(Color.textPrimary)
+                        .multilineTextAlignment(.leading)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.labelMedium)
+                        .foregroundStyle(Color.textSecondary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .padding(Spacing.md)
+            }
+
+            if isExpanded {
+                Text(answer)
+                    .font(.bodyMedium)
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, Spacing.md)
+            }
+        }
+        .background(Color.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
     }
 }
 
